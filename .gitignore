@@ -8,3 +8,4 @@ DBG/
 **/*.xlsb
 **/*.pptx
 **/*.accdb
+**/.vscode

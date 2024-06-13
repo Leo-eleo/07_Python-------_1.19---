@@ -41,6 +41,9 @@ def get_ZENKAKU_str(string,HANKAKU_start,HANKAKU_len):
 
 def SUB_PC判定_JCL():
     global A継続,C継続,P継続,IF継続,strREC,PC判定,PARM_開始桁,PARM_終了桁,COM_開始桁,COMMENT文字列,MSG,PARM文字列
+    # ADD 20240613 yi.a.qian
+    global next_rec
+    # ADD END
     
     PARM_終了桁 = 71
     for i in range(PARM_開始桁,min(72,len(strREC))):
@@ -102,7 +105,16 @@ def SUB_PC判定_JCL():
     
     MSG = PARM文字列[-1]
     if MSG == ",":
-        P継続 = True
+        # UPD 20240613 yi.a.qian
+        if not next_rec == "" and len(next_rec) > 3:
+            third_char = next_rec[2]
+            if third_char == " ":
+                P継続 = True
+            else:
+                P継続 = False
+        else:
+            P継続 = True
+        # UPD END
     else:
         P継続 = False
     
@@ -117,6 +129,9 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
     
     global DLM_flg,最終行_flg,解析中止_flg, NET行継続,A継続,C継続,P継続,IF継続,strREC
     global PC判定,PARM_開始桁,PARM_終了桁,COM_開始桁,COMMENT文字列,MSG,PARM文字列
+    # ADD 20240613 yi.a.qian
+    global next_rec
+    # ADD END
     TmpSheet = []
   
     DLM_flg = False
@@ -134,11 +149,21 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
     GYO = 2
     
     with open(Filename,errors="ignore") as TS:
-        
-        for strREC in TS:
+
+        # UPD 20240613 yi.a.qian
+        lines = TS.readlines()
+        for rec_index, strREC in enumerate(lines):
+        # UPD END
             
             strREC = strREC.replace("\n","")
             TmpSheet_GYO = [""]*12
+
+            # ADD 20240613 yi.a.qian
+            if not rec_index + 1 >= len(lines):
+                next_rec = lines[rec_index + 1]
+            else:
+                next_rec = ""
+            # ADD END
 #         'ADD 20111202 takei
             # '        if strREC.startswith(//*":
             # '           if コメント行制御 = "出力する":
@@ -156,10 +181,10 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                 JCL行分類 = "終了行"
             
                 #    '再度「JOB文」がきたら再解析開始 20140724 H.Takei
-#'20240205 UPD qian.e.wang
-                #if strREC.startswith("//") and strREC[2] != "*" and " JOB " in strREC:
-                if (strREC.startswith("//") or strREC.startswith("/\\")) and strREC[2] != "*" and " JOB " in strREC:
-#'ADD END
+                # UPD 20240613 yi.a.qian
+                if strREC.startswith("//") and strREC[2] != "*" and " JOB " in strREC:
+                # if (strREC.startswith("//") or strREC.startswith("/\\")) and strREC[2] != "*" and " JOB " in strREC:
+                # UPD END
                     解析中止_flg = False
                     最終行_flg = False
                     JCL行分類 = "通常行"
@@ -178,18 +203,18 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                 if Trim(Mid(strREC, 7, 64)).endswith(","):
                     NET行継続 = True
 
-#'20240131 DEL qian.e.wang
-            # elif strREC.startswith("/\\"):
-            
-            #     JCL行分類 = "/\行"   #'JFE倉敷で追加
-#'DEL END
+            # UPD 20240613 yi.a.qian
+            elif strREC.startswith("/\\"):
+                continue
+                # JCL行分類 = "/\行"   #'JFE倉敷で追加
+            # UPD END
             elif strREC.startswith("//*") or strREC.startswith("//-"):  #'"//-"は福山通運用暫定対応（終了行の後にある場合がある）
                 JCL行分類 = "ｺﾒﾝﾄ行"
             
-#'20240205 UPD qian.e.wang
-            #elif strREC.startswith("//"):
-            elif strREC.startswith("//") or strREC.startswith("/\\"):
-#'ADD END
+            # UPD 20240613 yi.a.qian
+            elif strREC.startswith("//"):
+            # elif strREC.startswith("//") or strREC.startswith("/\\"):
+            # UPD END
                 if 最終行_flg:
                     if " JOB " in strREC:
                         最終行_flg = False
