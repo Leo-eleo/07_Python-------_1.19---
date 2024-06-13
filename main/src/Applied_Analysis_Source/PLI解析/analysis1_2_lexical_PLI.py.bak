@@ -1,0 +1,403 @@
+#!/usr/bin/env python
+# -*- coding: cp932 -*-
+
+import sys
+import os
+import copy
+import re
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from Common_analysis import *
+
+KEY_STR = ""
+
+
+def 分離文字判定_PLI(STR, str2, str3):
+    global KEY_STR
+
+    if STR == " ":
+        return True
+    elif STR == ".":
+        if str2 == " " or str2 == "":
+            return True
+        else:
+            return False
+    elif STR == ",":
+        if KEY_STR != "データ部":  # 'データ部の ZZZ,ZZ9 の様な場合は分離させない
+            return True
+        else:
+            return False
+    elif STR == ";":
+        if str2 == " ":
+            return True
+        else:
+            return False
+    elif STR == ":":
+        return True
+    elif STR == "'":
+        if str2 == " ":
+            return True
+        else:
+            return False
+    elif STR == "\"":
+        if str2 == " ":
+            return True
+        else:
+            return False
+    elif STR == "(":
+        return True
+    elif STR == ")":
+        return True
+    # '注："=="は疑似ﾃｷｽﾄを表す区切り文字であるがｴｸｾﾙ対応が必要な為上位モジュールで処理する
+    elif STR == "=":
+        return True
+    elif STR == "X":
+        if str2 == "\"" or str2 == "'":
+            return True
+        else:
+            return False
+    elif STR == "Z":
+        if str2 == "\"" or str2 == "'":
+            return True
+        else:
+            return False
+    elif STR == "N":
+        if str2 == "\"" or str2 == "'":
+            return True
+        elif str2 == "X" and \
+                (str3 == "\"" or str3 == "'"):
+            return True
+        # '2013/9/19 ADD 富士通PLI？対応
+        elif str2 == "C" and \
+                (str3 == "\"" or str3 == "'"):
+            return True
+        elif str2 == "A" and \
+                (str3 == "\"" or str3 == "'"):
+            return True
+        elif str2 == "K" and \
+                (str3 == "\"" or str3 == "'"):
+            return True
+        elif str2 == "H" and \
+                (str3 == "\"" or str3 == "'"):
+            return True
+        elif str2 == "N" and \
+                (str3 == "\"" or str3 == "'"):
+            return True
+        else:
+            return False
+    elif STR == "G":
+        if str2 == "\"" or str2 == "'":
+            return True
+        else:
+            return False
+    # '2013/9/19 ADD 富士通PLI？対応
+    elif STR == "B":
+        if str2 == "\"" or str2 == "'":
+            return True
+        else:
+            return False
+    else:
+        return False
+
+def 検索行文字列生成処理(TokenSheet_str):
+
+    TokenSheet_str = [str(s) for s in TokenSheet_str]
+    検索行文字列 = " ".join(TokenSheet_str)
+
+    return DB文字(検索行文字列)
+
+def analysis1_2_lexical_PLI(TmpSheet, pli_keyword_dict, pli_function_dict, function_sheet):
+    global KEY_STR
+
+    基準列 = 5
+    検索行 = 2  # 'TempSheet　行ポインタ
+    出力行 = 1
+    出力列 = 5
+    TokenSheet_GYO = [""] * 5
+    TokenSheet = []
+    # KEY_STR = "ヘッダー"
+
+    for i in range(len(TmpSheet)):
+        TmpSheet_GYO = TmpSheet[i]
+
+        TmpSheet_GYO[-1] = TmpSheet_GYO[-1].replace(";", " ;")
+
+        # 230921 空白行を無視する
+        if TmpSheet_GYO[-1].replace(" ", "") == "":
+            continue
+        # :
+        if TmpSheet_GYO[-1][-1] == ":":
+            KEY_STR = TmpSheet_GYO[-1].replace(" ", "").split(":")[0]
+            TmpSheet_GYO[-1] = ":"
+        elif re.match(r"\\CPROC \(.*\)MOD\( (.*?) \)", TmpSheet_GYO[-1]) != None:
+            KEY_STR = re.match(r"\\CPROC \(.*\)MOD\( (.*?) \)", TmpSheet_GYO[-1]).group(1)
+        # not have :
+
+        PLI行分類 = TmpSheet_GYO[1]
+        PLI領域分類 = "PL/I"
+        CMD_fld = TmpSheet_GYO[8]
+
+        if CMD_fld.replace(" ", "") == "":  # '行中コメントがある場合、通常行でも空白になる可能性がある
+            continue
+
+        if TokenSheet_GYO != [""] * 5 and len(TokenSheet_GYO) > 5 :
+            TokenSheet.append(TokenSheet_GYO)
+
+        TokenSheet_GYO = [""] * 5
+
+        出力行 = 出力行 + 1  # '出力時カウントアップ
+
+        # '元資産行番号
+        TokenSheet_GYO[1] = TmpSheet_GYO[7]
+
+        # '行情報
+        TokenSheet_GYO[2] = PLI行分類
+
+        # '記述領域
+        TokenSheet_GYO[3] = PLI領域分類
+
+        # '階層情報
+        TokenSheet_GYO[4] = KEY_STR
+
+        # '出力列 = 3
+        出力列 = 基準列 - 1
+        # 'コマンド情報分解
+        i = 0
+        while i < len(CMD_fld):
+            判定対象文字 = Mid(CMD_fld, i, 1)
+            判定対象文字2 = Mid(CMD_fld, i + 1, 1)
+            判定対象文字3 = Mid(CMD_fld, i + 2, 1)
+            判定対象文字4 = Mid(CMD_fld, i + 3, 1)
+            判定対象文字_from = i
+            判定対象文字_to = i
+            # '上から優先して判定する
+
+            if 判定対象文字 == "'":
+                apost_cnt = 1
+                apost_start = True
+                apost_end = False
+
+                while True:
+                    判定対象文字_to = 判定対象文字_to + 1
+                    if Mid(CMD_fld, 判定対象文字_to, 1) == "'":
+                        apost_cnt = apost_cnt + 1  # '開始時にアポストロフィが続く場合の考慮
+                    else:
+                        apost_start = False  # '一旦アポストロフィーが途切れる
+                        apost_cnt = 0  # '途中で途切れたらカウントをリセット
+
+                    temp_num = apost_cnt % 2  # '連続アポストリフィが奇数だったらおわり
+
+                    if apost_start:
+                        if apost_cnt > 3 and temp_num == 0:  # '最初からアポストロフィが4つ以上偶数個連続する場合は終了
+                            apost_end = True
+                        else:
+                            apost_end = False
+                    else:
+                        if temp_num == 1:  # '一旦途切れたアポストロフィの場合は奇数個のアポストロフィが1個以上の場合終了
+                            apost_end = True
+                        else:
+                            apost_end = False
+
+                    if (Mid(CMD_fld, 判定対象文字_to, 1) == "'" and Mid(CMD_fld, 判定対象文字_to + 1,
+                                                                        1) != "'" and apost_end) or 判定対象文字_to >= 72:
+                        break
+
+                # '[判定対象文字_to]　の結果は [判定対象文字_from]の文字数を指し引かれた結果になる
+                対象文字数 = 判定対象文字_to - 判定対象文字_from + 1
+                i = i + 対象文字数
+                出力列 = 出力列 + 1
+                # '注意：EXCELシートに再出力する際「'」が除去されるので余分に「''」を付与する
+                TokenSheet_GYO.append(Mid(CMD_fld, 判定対象文字_from, 対象文字数))
+
+            # '「"」を区切で使うかどうか要確認（使わないのであれば↓は削除可）
+            elif 判定対象文字 == "\"":
+                判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 1, len(CMD_fld)).find("\"")
+
+                # '[判定対象文字_to]　の結果は [判定対象文字_from]の文字数を指し引かれた結果になる
+                対象文字数 = 判定対象文字_to + 1 + 1
+                i = i + 対象文字数
+                出力列 = 出力列 + 1
+                TokenSheet_GYO.append(Mid(CMD_fld, 判定対象文字_from, 対象文字数))
+            elif 分離文字判定_PLI(判定対象文字, 判定対象文字2, 判定対象文字3) == True:
+                # 'コメント部
+                if 判定対象文字 == " ":
+                    i = i + 1
+
+                elif 判定対象文字 == "=" and 判定対象文字2 == "=":
+                    判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 1, len(CMD_fld)).find("==")
+                    if 判定対象文字3 == "=" and 判定対象文字4 == "=":
+                        # '福山通運資産 「====」対応
+                        対象文字数 = 判定対象文字_to + 3 + 1
+                    else:
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 1, len(CMD_fld)).find("==")
+                        # '[判定対象文字_to]　の結果は [判定対象文字_from]の文字数を指し引かれた結果になる
+                        対象文字数 = 判定対象文字_to + 2 + 1
+                    i = i + 対象文字数
+                    出力列 = 出力列 + 1
+                    # '注意：EXCELに出力するには「==」はエラーになるので先頭に「'」を付与する
+                    TokenSheet_GYO.append(Mid(CMD_fld, 判定対象文字_from, 対象文字数))
+
+                elif 判定対象文字 == "X" or 判定対象文字 == "Z" or 判定対象文字 == "N" or 判定対象文字 == "G" or 判定対象文字 == "B":
+
+                    if 判定対象文字2 == "'":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 2, len(CMD_fld)).find(判定対象文字2)
+                        対象文字数 = 判定対象文字_to + 2 + 1
+                    elif 判定対象文字2 == "\"":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 2, len(CMD_fld)).find(判定対象文字2)
+                        対象文字数 = 判定対象文字_to + 2 + 1
+                    elif 判定対象文字2 == "X":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 3, len(CMD_fld)).find(判定対象文字3)
+                        対象文字数 = 判定対象文字_to + 3 + 1
+                        # '富士通日本語対応　FROM
+                    elif 判定対象文字2 == "C":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 3, len(CMD_fld)).find(判定対象文字3)
+                        対象文字数 = 判定対象文字_to + 3 + 1
+                    elif 判定対象文字2 == "A":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 3, len(CMD_fld)).find(判定対象文字3)
+                        対象文字数 = 判定対象文字_to + 3 + 1
+                    elif 判定対象文字2 == "K":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 3, len(CMD_fld)).find(判定対象文字3)
+                        対象文字数 = 判定対象文字_to + 3 + 1
+                    elif 判定対象文字2 == "H":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 3, len(CMD_fld)).find(判定対象文字3)
+                        対象文字数 = 判定対象文字_to + 3 + 1
+                    elif 判定対象文字2 == "N":
+                        判定対象文字_to = Mid(CMD_fld, 判定対象文字_from + 3, len(CMD_fld)).find(判定対象文字3)
+                        対象文字数 = 判定対象文字_to + 3 + 1
+                    # '富士通日本語対応 TO
+                    else:
+                        MSG = "想定外の処理"
+
+                    i = i + 対象文字数
+                    出力列 = 出力列 + 1
+                    TokenSheet_GYO.append(Mid(CMD_fld, 判定対象文字_from, 対象文字数))
+
+                else:
+                    i = i + 1
+                    出力列 = 出力列 + 1
+                    TokenSheet_GYO.append(判定対象文字)
+            else:
+                # '先頭が分離文字ではない場合
+                i2 = i
+                while True:
+                    i2 = i2 + 1
+                    if i2 >= len(CMD_fld) or 分離文字判定_PLI(Mid(CMD_fld, i2, 1), Mid(CMD_fld, i2 + 1, 1),
+                                                              Mid(CMD_fld, i2 + 2, 1)) == True:
+                        break
+
+                if i2 >= len(CMD_fld):
+                    判定対象文字_to = len(CMD_fld)
+                    i = len(CMD_fld)  # '後続検索終了
+                    対象文字数 = 判定対象文字_to - 判定対象文字_from + 1
+                    出力列 = 出力列 + 1
+                    TokenSheet_GYO.append(Mid(CMD_fld, 判定対象文字_from, 対象文字数))
+
+                else:
+                    判定対象文字_to = i2 - 1
+                    対象文字数 = 判定対象文字_to - 判定対象文字_from + 1
+                    i = i + 対象文字数
+                    対象文字 = Mid(CMD_fld, 判定対象文字_from, 対象文字数)
+                    出力列 = 出力列 + 1
+
+                    if pli_keyword_dict.get(対象文字) == "THEN" or pli_keyword_dict.get(対象文字) == "ELSE" \
+                        or pli_keyword_dict.get(対象文字) == "OTHER" or pli_keyword_dict.get(対象文字) == "OTHERWISE":
+                        TokenSheet_GYO.append(対象文字)
+                        TokenSheet.append(TokenSheet_GYO)
+                        TokenSheet_GYO = [""] * 5
+                        TokenSheet_GYO[1] = TmpSheet_GYO[7]
+                        TokenSheet_GYO[2] = PLI行分類
+                        TokenSheet_GYO[3] = PLI領域分類
+                        TokenSheet_GYO[4] = KEY_STR
+                        continue
+
+                    TokenSheet_GYO.append(対象文字)
+
+                    # 'デバック
+                    # 'Dim tmp_str As String
+                    # 'tmp_str = TokenSheet_GYO[出力列]
+    TokenSheet.append(TokenSheet_GYO)
+
+    call_table = []
+
+    filename_dd_io_table = []
+
+    # | ファイル名 | レコード名 | 関連コピー句 | 入出力パラメータ | 入出力定義情報分離文字判定_PLI |
+    # |      0     |     1     |      2      |        3        |               4              |
+    ##### Now This Table is blank #####
+    filename_copy_relation_table = []
+
+    io_filename_table = []
+
+    for token_sheet_row in TokenSheet:
+        # Table_item -> | COBOL_ID | 呼出方法 | 関連資産 | 関連資産_TRANID |
+        #               |     0    |     1    |    2    |        3        |
+        # CALL Keyword
+        if pli_keyword_dict.get(token_sheet_row[5]) == "CALL":
+            call_table_item = [""] * 4
+            call_table_item[0] = token_sheet_row[4] # 階層情報
+            call_table_item[1] = token_sheet_row[5].upper() # -> CALL
+            if len(token_sheet_row) <= 6:
+                call_table_item[2] = ""
+            else:
+                call_table_item[2] = "\'{}\'".format(token_sheet_row[6].replace(" ;", "")) # Call Target
+            call_table.append(call_table_item)
+        # 組み込み関数
+        elif pli_function_dict.get(token_sheet_row[5]) != None:
+            call_table_item = [""] * 4
+            call_table_item[0] = token_sheet_row[4] # 階層情報
+            call_table_item[1] = "CALL" # -> CALL
+            call_table_item[2] = "\'{}\'".format(token_sheet_row[5].replace(" ;", "")) # 組み込み関数
+            call_table_item[3] = pli_function_dict.get(token_sheet_row[5]) # 定義資産
+            call_table.append(call_table_item)
+
+
+        # Table_item -> | ファイル名 | DD名 | 入出力情報 | LINE_INFO |
+        #               |     0     |   1   |     2     |    3      |
+        ## Rule -> DCL　ファイル名　FILE　DD名　入出力情報
+        elif pli_keyword_dict.get(token_sheet_row[5]) == "DCL" \
+            and ("file" in token_sheet_row or "FILE" in token_sheet_row):
+
+            filename_dd_io_table_item = [""] * 4
+            filename_dd_io_table_item[2] = "INPUT"
+            # LINE_INFO
+            filename_dd_io_table_item[3] = token_sheet_row[1]
+            # File List
+            # Example: "dcl INFL(2) file VARIABLE , INFLA file RECORD , INFLB file RECORD;"
+            if ("," in token_sheet_row):
+                # The word "file" in lines count
+                # file list not have 入出力情報
+                skip_flag = False
+                for i, column in enumerate(token_sheet_row):
+                    if column == "(":
+                        skip_flag = True
+                    elif column == ")":
+                        skip_flag = False
+                    if pli_keyword_dict.get(column) == "FILE":
+                        # Exclude in brackets
+                        if skip_flag:
+                            continue
+                        # Process
+                        if token_sheet_row[i-1] == ")":
+                            filename_dd_io_table_item[0] = 検索行文字列生成処理(token_sheet_row[i-4:i])
+                        else:
+                            filename_dd_io_table_item[0] = token_sheet_row[i-1]
+                        filename_dd_io_table_item[1] = token_sheet_row[i+1]
+                        filename_dd_io_table.append(copy.deepcopy(filename_dd_io_table_item))
+            # Not File List
+            # Example: "dcl INFL file RECORD input;"
+            else:
+                filename_dd_io_table_item[0] = token_sheet_row[6] # ファイル名
+                filename_dd_io_table_item[1] = token_sheet_row[8] # DD名
+                if len(token_sheet_row) > 10 :
+                    filename_dd_io_table_item[2] = 検索行文字列生成処理(token_sheet_row[9:len(token_sheet_row)-1])
+                filename_dd_io_table.append(copy.deepcopy(filename_dd_io_table_item))
+
+    for item in filename_dd_io_table:
+        # Table_item -> | 入出力区分 | ファイル名 |
+        #               |     0     |     1      |
+        io_filename_table_item = [""] * 2
+        io_filename_table_item[0] = item[2] # 入出力情報
+        io_filename_table_item[1] = item[0] # ファイル名
+        io_filename_table.append(io_filename_table_item)
+
+    return TokenSheet, call_table, filename_dd_io_table, filename_copy_relation_table, io_filename_table

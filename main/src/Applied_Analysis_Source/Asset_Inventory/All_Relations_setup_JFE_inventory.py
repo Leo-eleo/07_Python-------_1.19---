@@ -1,0 +1,253 @@
+#!/usr/bin/env python
+# -*- coding: cp932 -*-
+
+import sys
+import os
+import pandas as pd
+import datetime
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from Common_analysis import *
+
+
+dt_now = str(datetime.date.today())
+
+
+all_relation_header = ["åƒèoå≥éëéY","åƒèoï˚ñ@","åƒèoêÊéëéY","éÛóÃîªíË","ébíËñ≥å¯FLG","ïœêîñº","åƒèoéûPARM","ìoò^ï™óﬁ"]
+
+groups_key_list = ["Gr1(å`ç|ÅEäÓî’ÅEÇªÇÃëº)","Gr2","Gr3","Gr4","Gr5(ó‚âÑÅEìdé•ÅEèoâ◊)","Gr5(ó‚âÑÅEìdé•ÅEèoâ◊)","Gr5(ó‚âÑÅEìdé•ÅEèoâ◊)",\
+                    "Gr6(ä«óùånÅEëÄã∆ån)","Gr6(ä«óùånÅEëÄã∆ån)",\
+                    "Gr7(êªç|ånÅEñ_ê¸ånÅEèç|èoâ◊ån)","Gr7(êªç|ånÅEñ_ê¸ånÅEèç|èoâ◊ån)","Gr7(êªç|ånÅEñ_ê¸ånÅEèç|èoâ◊ån)","Gr7(êªç|ånÅEñ_ê¸ånÅEèç|èoâ◊ån)","Gr7(êªç|ånÅEñ_ê¸ånÅEèç|èoâ◊ån)"]
+groups_info_list = ["Gr1","Gr2","Gr3","Gr4","Gr5(ó‚âÑ)","Gr5(ìdé•)","Gr5(èoâ◊)",\
+                    "Gr6(ä«óùån)","Gr6(ëÄã∆ån)","Gr7(êªç|ånÅEä«óùån)","Gr7(êªç|ånÅEëÄã∆ån)","Gr7(ñ_ê¸ånÅEä«óùån)","Gr7(ñ_ê¸ånÅEëÄã∆ån)","Gr7(èç|èoâ◊ånÅEëÄã∆ån)"
+                    ]
+
+
+
+
+def make_member_list(member_list_path):
+    
+    df_member_list = pd.read_excel(member_list_path,sheet_name="ÉÅÉìÉoàÍóóÉ}Å[ÉWî≈",header=1)
+    df_member_list.fillna("", inplace=True)
+    
+    member_list_key_dic = {}
+    member_list_module_dic = {}
+    
+
+    ### ÉÅÉìÉoàÍóóÇ©ÇÁéÊìæÇ∑ÇÈèÓïÒ
+    for i in range(len(df_member_list)):
+        data = df_member_list.iloc[i]
+        
+        asset_key,asset_module = data["KEY2"],data["ÉÇÉWÉÖÅ[ÉãID"]
+        
+        asset_type,asset_need = data["éëéYï™óﬁ(ACN)"],data["éëéYóvî€(çáê¨åãâ )"]
+    
+        if asset_key in member_list_key_dic:
+            print("Error KEY2 = {} found multiple line in members list".format(asset_key))
+            # print(member_list_key_dic[asset_key])
+            new_library = data["êVä¬ã´ä«óùÉâÉCÉuÉâÉäñº"]
+            if new_library != "":
+                member_list_key_dic[asset_key] = [asset_type,asset_need]
+            # print(new_library,member_list_key_dic[asset_key])
+        else:
+            member_list_key_dic[asset_key] = [asset_type,asset_need]
+            
+        if asset_module not in member_list_module_dic:
+            member_list_module_dic[asset_module] = [0,0]
+            
+        if asset_need in ("îpé~çœ","ëŒè€äO"):
+            member_list_module_dic[asset_module][0] += 1
+        else:
+            member_list_module_dic[asset_module][1] += 1
+        
+        
+    return member_list_key_dic,member_list_module_dic
+
+
+def make_relation_merge_df(excel_relation_merge_path):
+    
+    df_relation_merge = pd.read_excel(excel_relation_merge_path,sheet_name=None)  
+    df_sheet_list = df_relation_merge.keys()
+
+    relation_merge_df = []
+    for sheetname in df_sheet_list:
+        if "éëéYä÷òAê´í≤ç∏åãâ " not in sheetname:
+            continue
+        df = df_relation_merge[sheetname]
+        df.fillna("",inplace=True)
+        relation_merge_df.append(df)
+        
+    return pd.concat(relation_merge_df)
+        
+def make_starting_relation_merge_df(starting_relation_merge_path):
+    starting_relation_merge_df = pd.read_excel(starting_relation_merge_path,sheet_name="ãNì_éëéYä÷òAê´",header=1)
+    starting_relation_merge_df.fillna("",inplace=True)
+    
+    return starting_relation_merge_df
+    
+def make_exclude_dic(setting_file_path):
+    df_exclude_all = pd.read_excel(setting_file_path,sheet_name=None)  
+    df_sheet_list = df_exclude_all.keys()
+    
+    exclude_all = set(df_exclude_all["â^ópånJCL_äÆëSèúäO"]["èúäOéëéYñº"].values.tolist())
+    exclude_from_source = set()
+    df_exclude = df_exclude_all["èúäOéëéY_Grã§í "]
+    
+    for asset,info in zip(df_exclude["èúäOéëéYñº"],df_exclude["éQè∆èÓïÒ"]):
+        if info == "ëaåãçáëŒè€JOBÉlÉbÉg":
+            exclude_all.add(asset)
+        else:
+            exclude_from_source.add(asset)
+            
+    exclude_group = {}
+    for group in groups_info_list:
+        sheet_name = "èúäOéëéY_" + group
+        if sheet_name in df_sheet_list:
+            df_exclude = df_exclude_all[sheet_name]
+            exclude_all_group = set()
+            exclude_from_source_group = set()
+            for asset,info in zip(df_exclude["èúäOéëéYñº"],df_exclude["éQè∆èÓïÒ"]):
+                if info == "ëaåãçáëŒè€JOBÉlÉbÉg":
+                    exclude_all_group.add(asset)
+                else:
+                    exclude_from_source_group.add(asset)
+            
+            exclude_group[group] = [exclude_all_group,exclude_from_source_group]
+        else:
+            exclude_group[group] = [[],[]]
+            
+    return exclude_all,exclude_from_source,exclude_group
+
+
+
+def output_relation_list_group(relation_merge_df,starting_relation_merge_df,member_list_key_dic,member_list_module_dic,exclude_all,exclude_from_source,exclude_group,gr_key,gr_base_info,title):
+    
+    
+    all_relation_set = set()
+    
+    df_group = relation_merge_df[(relation_merge_df[gr_key] == "Åõ") | (relation_merge_df["ï™óﬁïsóv"] == "Åõ")]
+    for source,relation,to_source,asset_name,asset_need in zip(df_group["åƒèoå≥éëéYÅiÉÅÉìÉoÇÃÇ›Åj"],df_group["åƒÇ—èoÇµï˚ñ@"],df_group["åƒÇ—èoÇµêÊéëéY"],df_group["ä÷òAê´ãLç⁄éëéYñº"],df_group["éëéYóvî€"]):
+                
+        extract_flg = ""
+        ### â^ópånJCL_äÆëSèúäO ÇÃéëéYÇèúäO
+        if source in exclude_all or to_source in exclude_all:
+            extract_flg = "Åõ"
+            
+        ### ëaåãçáëŒè€JOBÉlÉbÉg ÇÃéëéYÇèúäO
+        if source in exclude_group[0] or to_source in exclude_group[0]:
+            extract_flg = "Åõ"
+        
+        ### éwíËèúäOéëéY ÇÃéëéYÇèúäO
+        if source in exclude_from_source or source in exclude_group[1]:
+            extract_flg = "Åõ"
+        
+        
+        ### âÊñ Å®PGMåƒèoÇ…Ç®ÇØÇÈ MCPíËã`ÇÃèúäO
+        if relation == "âÊñ Å®PGMåƒèo":
+            if asset_name in member_list_key_dic and member_list_key_dic[asset_name][0] == "ACSÅiMCPíËã`Åj" and asset_need in ("îpé~çœ","ëŒè€äO"):
+                extract_flg = "Åõ"
+            
+        ### ÉÅÉìÉoàÍóóÇÃîpé~çœ,ëŒè€äOéëéYÇÃèúäO    
+        if to_source in member_list_key_dic and member_list_key_dic[to_source][1] in ("îpé~çœ","ëŒè€äO"):
+            extract_flg = "Åõ"
+        
+        if to_source in member_list_module_dic and (member_list_module_dic[to_source][0] > 0 and member_list_module_dic[to_source][1] == 0):
+            extract_flg = "Åõ"
+            
+        if (source,to_source,gr_base_info) == ("N2DAIKOU","KZ71FW00","Gr5(èoâ◊)"):
+            extract_flg = "Åõ"
+            
+        if to_source in member_list_key_dic:
+            source_type = member_list_key_dic[to_source][0]
+        else:
+            source_type = ""
+            
+        all_relation_set.add((source,relation,to_source,source_type,extract_flg,"","",""))
+        
+    for source,relation,to_source,gr_info in zip(starting_relation_merge_df["åƒèoå≥éëéYÅiÉÅÉìÉoÇÃÇ›Åj"],starting_relation_merge_df["åƒèoï˚ñ@"],starting_relation_merge_df["åƒèoêÊéëéY"],starting_relation_merge_df["Groupï™óﬁ(JSIâìö)"]):
+        
+        extract_flg = ""
+        
+        ### â^ópånJCL_äÆëSèúäO ÇÃéëéYÇèúäO
+        if source in exclude_all or to_source in exclude_all:
+            extract_flg = "Åõ"
+        
+        ### ëaåãçáëŒè€JOBÉlÉbÉg ÇÃéëéYÇèúäO
+        if source in exclude_group[0] or to_source in exclude_group[0]:
+            extract_flg = "Åõ"
+        
+        ### éwíËèúäOéëéY ÇÃéëéYÇèúäO
+        if source in exclude_from_source or source in exclude_group[1]:
+            extract_flg = "Åõ"
+        
+        ### ÉÅÉìÉoàÍóóÇÃîpé~çœ,ëŒè€äOéëéYÇÃèúäO    
+        if to_source in member_list_key_dic and member_list_key_dic[to_source][1] in ("îpé~çœ","ëŒè€äO"):
+            extract_flg = "Åõ"
+        
+        if to_source in member_list_module_dic and (member_list_module_dic[to_source][0] > 0 and member_list_module_dic[to_source][1] == 0):
+            extract_flg = "Åõ"
+    
+        
+        if gr_info.startswith("Å~"):# or gr_info.startswith("7"):
+            continue
+        
+        if "(" not in gr_info:
+            print("Group info format is not matched {},{},{},{}".format(source,relation,to_source,gr_info))
+            continue
+        
+        gr_lis = gr_info[:gr_info.find("(")].split("ÅE")
+        for gr in gr_lis:
+            gr_name = "Gr" + gr
+            if gr_name not in gr_base_info:
+                continue
+            
+            if gr_name == "Gr5" and gr_base_info[4:6] not in gr_info:
+                continue
+            
+            if gr_name == "Gr6" or gr_name == "Gr7":
+                if gr_base_info[4:len(gr_base_info)-1] not in gr_info:
+                    continue
+                
+            
+            if to_source in member_list_key_dic:
+                source_type = member_list_key_dic[to_source][0]
+            else:
+                source_type = ""
+                
+            all_relation_set.add((source,relation,to_source,source_type,extract_flg,"","",""))
+            
+    gr_name = gr_base_info
+    if "Gr5" in gr_name:
+        gr_name = "Gr5"
+    if "Gr6" in gr_name:
+        gr_name = "Gr6"
+    if "Gr7" in gr_name:
+        gr_name = "Gr7"
+        
+    file_name = "å⁄ãqï _éëéYä÷òAê´èÓïÒ_"+gr_base_info+"_"+dt_now+".xlsx"
+    out_title = os.path.join(title,gr_name)
+    
+    if os.path.isdir(out_title) == False:
+        os.makedirs(out_title)
+        
+    write_excel_multi_sheet3(file_name,[sorted(all_relation_set)],["å⁄ãqï _éëéYä÷òAê´èÓïÒ"],out_title,[all_relation_header])
+        
+
+def main(member_list_path,excel_relation_merge_path,starting_relation_merge_path,setting_file_path,title):
+  
+    exclude_all,exclude_from_source,exclude_group = make_exclude_dic(setting_file_path)
+
+    member_list_key_dic,member_list_module_dic = make_member_list(member_list_path)
+        
+    relation_merge_df = make_relation_merge_df(excel_relation_merge_path)
+    
+    starting_relation_merge_df = make_starting_relation_merge_df(starting_relation_merge_path)
+    
+    for gr_key,gr_info in zip(groups_key_list,groups_info_list):
+        output_relation_list_group(relation_merge_df,starting_relation_merge_df,member_list_key_dic,member_list_module_dic,exclude_all,exclude_from_source,exclude_group[gr_info],gr_key,gr_info,title)
+    
+            
+    
+if __name__ == "__main__":
+    main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
+ 

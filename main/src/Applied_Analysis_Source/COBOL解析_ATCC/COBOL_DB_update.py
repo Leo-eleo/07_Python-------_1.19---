@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+# -*- coding: cp932 -*-
+
+import sys
+import os
+
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from Common_analysis import *
+
+
+tables_language_analysis = ["‡ACOBOL_CMDî•ñ","‡ACOBOL_Šî–{î•ñ","‡ACOBOL_ŠÖ˜A‘Y","‡ACOBOL_“üo—Íî•ñ1","‡ACOBOL_“üo—Íî•ñ2","‡ACOBOL_“üo—Íî•ñ3","‹¤’Ê_PGM_IOî•ñ"]
+tables_client_db = ["ŒÚ‹q•Ê_COBOL_CMDî•ñ","ŒÚ‹q•Ê_COBOL_Šî–{î•ñ","ŒÚ‹q•Ê_COBOL_ŠÖ˜A‘Y","ŒÚ‹q•Ê_COBOL_“üo—Íî•ñ1","ŒÚ‹q•Ê_COBOL_“üo—Íî•ñ2","ŒÚ‹q•Ê_COBOL_“üo—Íî•ñ3","ŒÚ‹q•Ê_PGM_IOî•ñ"]
+keys_list = ["‘YID","‘YID","‘YID","‘YID","‘YID","‘YID","‘YID"]
+
+
+def main(Folder_COBOL_path,base_file_path,new_file_path):
+    
+    COBOL_Files = glob_files(Folder_COBOL_path)
+    
+    conn_base = connect_accdb(base_file_path)
+    cursor_base = conn_base.cursor()
+    
+    conn_new = connect_accdb(new_file_path)
+    cursor_new = conn_base.cursor()
+    
+    tables = [table.table_name for table in cursor_base.tables(tableType='TABLE')]
+    
+    if "‡ACOBOL_CMDî•ñ" in tables:
+        tables_list = tables_language_analysis
+    else:
+        tables_list = tables_client_db
+        
+    for COBOL_File in COBOL_Files:
+        file_name = get_filename(COBOL_File)
+        file_name_ext = take_extensions(file_name)
+        for table_name,key in zip(tables_list,keys_list):
+            sql,values = make_delete_sql(table_name,[file_name],[key])
+            cursor_base.execute(sql,values)
+            
+            sql,values = make_delete_sql(table_name,[file_name_ext],[key])
+            cursor_base.execute(sql,values)
+            
+    for table_new,tabel_base in zip(tables_language_analysis,tables_list):
+        
+        if table_new == "‡ACOBOL_CMDî•ñ":
+            sql =   """\
+                        SELECT * FROM ‡ACOBOL_CMDî•ñ WHERE CMD•ª—Ş = 'CALL'
+                        """
+        else:
+            sql = "SELECT * FROM " + table_new
+        
+        df = pd.read_sql(sql,conn_new)
+        df.fillna("",inplace=True)
+        keys = df.columns.tolist()
+        if "AUTO_KEY" in keys:
+            keys.remove("AUTO_KEY")
+
+        for i in range(len(df)):
+            data = df.iloc[i]
+            values = [data[key] for key in keys]
+            sql,values = make_insert_sql(tabel_base,values,keys)
+            cursor_base.execute(sql,values)
+      
+      
+if __name__ == "__main__":
+    main(sys.argv[1],sys.argv[2],sys.argv[3])

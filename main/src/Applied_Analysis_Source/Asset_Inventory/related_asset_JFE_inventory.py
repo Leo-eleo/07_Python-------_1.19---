@@ -1,0 +1,717 @@
+#!/usr/bin/env python
+# -*- coding: cp932 -*-
+import sys
+import os
+import pyodbc
+import pandas as pd
+import datetime
+
+from collections import deque
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from Common_analysis import *
+
+dt_now = str(datetime.date.today())
+
+
+
+groups_list = ["Gr1(Œ`|EŠî”ÕE‚»‚Ì‘¼)","Gr1(Œ`|)","Gr1(Šî”Õ)","Gr1(‚»‚Ì‘¼)","Gr2","Gr3","Gr4","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„)","Gr5(“d¥)","Gr5(o‰×)",\
+                "Gr6(ŠÇ—ŒnE‘€‹ÆŒn)","Gr6(ŠÇ—Œn)","Gr6(‘€‹ÆŒn)",\
+                "Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|Œn)","Gr7(»|ŒnEŠÇ—Œn)","Gr7(»|ŒnE‘€‹ÆŒn)","Gr7(–_üŒn)","Gr7(–_üŒnEŠÇ—Œn)","Gr7(–_üŒnE‘€‹ÆŒn)","Gr7(ğ|o‰×Œn)","Gr7(ğ|o‰×ŒnEŠÇ—Œn)","Gr7(ğ|o‰×ŒnE‘€‹ÆŒn)"
+]
+same_modules = ["ƒRƒCƒ‹","ƒXƒ‰ƒu","Œ`|","Œv‰æ","Ş","”M‰„","”Md"]
+same_modules_group = ["Gr6","Gr6","Gr1","Gr6","Gr3","Gr6","Gr6"]
+len_groups = len(groups_list)
+all_starting_asset_header = ["TEST_ID","Às‡˜","ÀsJOB","•â‘«","o—ÍƒtƒHƒ‹ƒ_"]
+
+
+groups_key_list = ["Gr1(Œ`|EŠî”ÕE‚»‚Ì‘¼)","Gr2","Gr3","Gr4","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„E“d¥Eo‰×)",\
+                    "Gr6(ŠÇ—ŒnE‘€‹ÆŒn)","Gr6(ŠÇ—ŒnE‘€‹ÆŒn)",\
+                    "Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)"]
+groups_info_list = ["Gr1","Gr2","Gr3","Gr4","Gr5(—â‰„)","Gr5(“d¥)","Gr5(o‰×)",\
+                    "Gr6(ŠÇ—Œn)","Gr6(‘€‹ÆŒn)","Gr7(»|ŒnEŠÇ—Œn)","Gr7(»|ŒnE‘€‹ÆŒn)","Gr7(–_üŒnEŠÇ—Œn)","Gr7(–_üŒnE‘€‹ÆŒn)","Gr7(ğ|o‰×ŒnE‘€‹ÆŒn)"
+                    ]
+
+
+
+
+screen_asset_header = ["KEY2","ƒ‰ƒCƒuƒ‰ƒŠ","ƒ\[ƒXŠÇ—†‹@","–{”Ô†‹@1","–{”Ô†‹@2","–{”Ô†‹@3","ƒ‚ƒWƒ…[ƒ‹ID",\
+                    "‘Yó—Ìó‹µ","‘Y•ª—Ş(ACN)","‘Y—v”Û(‡¬Œ‹‰Ê)","CVT—v”Û(‡¬Œ‹‰Ê)","JSI‘Y—LŒø”»’è","‘Y—˜—pƒVƒXƒeƒ€",\
+                    "Gr1(Œ`|EŠî”ÕE‚»‚Ì‘¼)","Gr1(Œ`|)","Gr1(Šî”Õ)","Gr1(‚»‚Ì‘¼)","Gr2","Gr3","Gr4","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„)","Gr5(“d¥)","Gr5(o‰×)",\
+                    "Gr6(ŠÇ—ŒnE‘€‹ÆŒn)","Gr6(ŠÇ—Œn)","Gr6(‘€‹ÆŒn)",\
+                    "Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|Œn)","Gr7(»|ŒnEŠÇ—Œn)","Gr7(»|ŒnE‘€‹ÆŒn)","Gr7(–_üŒn)","Gr7(–_üŒnEŠÇ—Œn)","Gr7(–_üŒnE‘€‹ÆŒn)","Gr7(ğ|o‰×Œn)","Gr7(ğ|o‰×ŒnEŠÇ—Œn)","Gr7(ğ|o‰×ŒnE‘€‹ÆŒn)", \
+                    "“ú–{Œê–¼Ì","’ŠoŒ³JCL","“o˜^Ò—p‘YID–½–¼‹K‘¥","“o˜^Ò—p‘YID"]
+
+revival_asset_header = ["ˆ—‹N“_","ŠÖ˜A‘Y","‘Y•ª—Ş","ƒ\[ƒX–¼","”õl‡@\nƒ[ƒhƒ‰ƒCƒuƒ‰ƒŠ","”õl‡A\nÀsŠÂ‹«","”õl‡B\n—LŒø‘Y”»’è","uŠÖ˜A‘Yv‚Ì\n•œŠˆ—v”Û","”»’f——R"]
+
+related_asset_header = ["ˆ—‹N“_","ŠÖ˜A‘Y","‘Y•ª—Ş","ƒIƒ“ƒoƒbƒ`•ª—Ş","”õl‡@","”õl‡A","”õl‡B"]
+
+starting_asset_merge_header = ["ŠÖ˜A‘Y","‘Y•ª—Ş","‹N“_‘Y=\n—˜—p‘Y=›","ƒIƒ“ƒoƒbƒ`•ª—Ş"]
+
+asset_inventory_header = ["KEY2","ƒ‰ƒCƒuƒ‰ƒŠ","ƒ\[ƒXŠÇ—†‹@","–{”Ô†‹@1","–{”Ô†‹@2","–{”Ô†‹@3","ƒ‚ƒWƒ…[ƒ‹ID","‘Yó—Ìó‹µ","‘Y•ª—Ş(ACN)","‘Y—v”Û(‡¬Œ‹‰Ê)","JSI‘Y—LŒø”»’è","CVT—v”Û(‡¬Œ‹‰Ê)","‘Y—˜—pƒVƒXƒeƒ€",\
+                          "Gr1(Œ`|EŠî”ÕE‚»‚Ì‘¼)","Gr1(Œ`|)","Gr1(Šî”Õ)","Gr1(‚»‚Ì‘¼)","Gr2","Gr3","Gr4","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„)","Gr5(“d¥)","Gr5(o‰×)",\
+                          "Gr6(ŠÇ—ŒnE‘€‹ÆŒn)","Gr6(ŠÇ—Œn)","Gr6(‘€‹ÆŒn)",\
+                          "Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|Œn)","Gr7(»|ŒnEŠÇ—Œn)","Gr7(»|ŒnE‘€‹ÆŒn)","Gr7(–_üŒn)","Gr7(–_üŒnEŠÇ—Œn)","Gr7(–_üŒnE‘€‹ÆŒn)","Gr7(ğ|o‰×Œn)","Gr7(ğ|o‰×ŒnEŠÇ—Œn)","Gr7(ğ|o‰×ŒnE‘€‹ÆŒn)", \
+                          "“ú–{Œê–¼Ì","’ŠoŒ³JCL","“o˜^Ò—p‘YID–½–¼‹K‘¥","“o˜^Ò—p‘YID","ƒoƒbƒ`‘Y","ƒIƒ“ƒ‰ƒCƒ“‘Y","’I‰µ”»’è","’I‰µ”»’è(‘O‰ñ)","—˜—p”»’è","ƒoƒbƒ`”»’è","ƒIƒ“ƒ‰ƒCƒ“”»’è",\
+                          "•œŠˆ‘Y","‰æ–Ê’Ç‰ÁˆÚs‘ÎÛ‘Y(ƒoƒbƒ`—˜—p)","‰æ–Ê’Ç‰ÁˆÚs‘ÎÛ‘Y(ƒIƒ“ƒ‰ƒCƒ“—˜—p)"]
+
+group_all_use = ["›"]*len_groups
+group_all_empty = [""]*len_groups
+
+
+name_dic = {}
+rev_name_dic = {}
+relation_graph = []
+relation_group_info = {}
+relation_list = {}
+visited_id = []
+
+
+
+def write_excel_multi_sheet(filename,dfs,sheet_names,path,output_headers):
+    
+    Sheet_lim = 10**6
+    writer = pd.ExcelWriter(path+"/"+filename,engine='xlsxwriter')
+    writer.book.use_zip64()
+    sheet_name_list = []
+    
+    df_list = []
+    output_header_list = []
+    for df,header,sheet_name in zip(dfs,output_headers,sheet_names):
+        M = len(df)
+        for i in range(M//Sheet_lim+1):
+            df_list.append(df[i*Sheet_lim:min(M,(i+1)*Sheet_lim)])
+            output_header_list.append(header)
+            if i == 0:
+                sheet_name_list.append(sheet_name)
+            else:
+                sheet_name_list.append(sheet_name +"_" + str(i+1))
+            
+    for list,sheet_name,header in zip(df_list,sheet_name_list,output_header_list):
+        df = pd.DataFrame(list,columns=header)
+        df.to_excel(writer, sheet_name=sheet_name,index=False)
+        
+    writer._save()
+    writer.close()
+    
+    
+def check_module_name(name):
+    for module in same_modules:
+        if module in name:
+            return name[:name.find(module)]
+    
+    return name    
+
+
+def get_df_revival_asset(setting_file_path,gr_info):
+    sheet_name = "•œŠˆ‘Y_" + gr_info
+    
+    try:
+        df_revival = pd.read_excel(setting_file_path,sheet_name=sheet_name)
+        df_revival = df_revival[revival_asset_header]
+        df_revival.fillna("",inplace=True)
+    except:
+        print("Error there is no sheet of {} for revival asset.".format(sheet_name))
+        df_revival = pd.DataFrame([])
+        
+    return df_revival
+
+    
+def make_inventory_template(asset_inventory_template_path):
+    inventory_template_df = pd.read_excel(asset_inventory_template_path,sheet_name="’I‰µ—p‘Yˆê——",header=0)
+    inventory_template_df.fillna("",inplace=True)
+    
+    inventory_id_matching_dic = {}
+    inventory_key_matching_dic = {}
+    
+    for i,(key,inventory_id) in enumerate(zip(inventory_template_df["KEY2"],inventory_template_df["“o˜^Ò—p‘YID"])):
+        if inventory_id not in inventory_id_matching_dic:
+            inventory_id_matching_dic[inventory_id] = []
+            
+        inventory_id_matching_dic[inventory_id].append(i)
+        
+        if key not in inventory_key_matching_dic:
+            inventory_key_matching_dic[key] = []
+            
+        inventory_key_matching_dic[key].append(i)
+        
+    return inventory_template_df,inventory_id_matching_dic,inventory_key_matching_dic
+    
+    
+def make_screen_asset_and_judge_from_member_list(member_list_path):
+    
+    df_member_list = pd.read_excel(member_list_path,sheet_name="ƒƒ“ƒoˆê——ƒ}[ƒW”Å",header=1)
+    df_member_list.fillna("", inplace=True)
+    
+    screen_asset_list = []  
+    
+    screen_asset_info_list = screen_asset_header[:-3]
+
+    ### ƒƒ“ƒoˆê——‚©‚çæ“¾‚·‚éî•ñ
+    for i in range(len(df_member_list)):
+        data = df_member_list.iloc[i]
+        
+        # asset_key,asset_module = data["KEY2"],data["ƒ‚ƒWƒ…[ƒ‹ID"]
+        
+        asset_type,asset_valid = data["‘Y•ª—Ş(ACN)"],data["JSI‘Y—LŒø”»’è"]
+    
+        if asset_valid == "":
+            continue
+        
+        if asset_type not in ("PSAM’è‹`i‰æ–ÊFFMTGENj","PSAM’è‹`i‰æ–ÊFMEDGENj"):
+            continue
+        
+            
+        screen_list_row = [data[key] for key in screen_asset_info_list]
+        screen_list_row.extend(["","ƒƒ“ƒoˆê——ƒ‚ƒWƒ…[ƒ‹ID—ñ",data["ƒ‚ƒWƒ…[ƒ‹ID"]])
+        screen_asset_list.append(screen_list_row)
+        
+    return screen_asset_list
+        
+
+
+def make_relations_group_and_adl_definition_list(base_path,gr_info):
+    
+    adl_definition_dic = {}
+    search_path = os.path.join(base_path)
+    folder_files = glob_files(search_path)
+    
+    for file_path in folder_files:
+        if "ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ" not in file_path or gr_info not in file_path:
+            continue
+        relations_group_df = pd.read_excel(file_path,sheet_name="ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ")
+        relations_group_df.fillna("",inplace=True)
+        
+        for source_from,relation,source_to in zip(relations_group_df["ŒÄoŒ³‘Y"],relations_group_df["ŒÄo•û–@"],relations_group_df["ŒÄoæ‘Y"]):
+ 
+            if "ƒtƒ@ƒCƒ‹–¼" in relation:
+                if source_from not in adl_definition_dic:
+                    adl_definition_dic[source_from] = set()
+                adl_definition_dic[source_from].add(source_to)    
+ 
+        relations_group_df = relations_group_df[relations_group_df["b’è–³ŒøFLG"] != "›"]
+        return relations_group_df,adl_definition_dic
+    
+    
+    print("Error, there is no file of relations on {} in {}".format(gr_info,base_path))
+    return pd.DataFrame([]),[]
+
+
+def make_relations_group_starting_point(starting_point_merge_path,gr_base_info):
+    starting_asset_set = set()
+    
+    df_starting_list = pd.read_excel(starting_point_merge_path,sheet_name="‹N“_‘Yˆê——",header=1)
+    df_starting_list.fillna("",inplace=True)
+    for starting_asset,onbatch,gr_info in zip(df_starting_list["ÀsJOB"],df_starting_list["ONBAT"],df_starting_list["Group•ª—Ş(JSI‰ğ“š)"]):
+        if gr_info.startswith("~"):
+            continue
+        if "(" not in gr_info:
+            print("Group info format is not matched {},{},{}".format(starting_asset,onbatch,gr_info))
+            continue
+        
+        gr_lis = gr_info[:gr_info.find("(")].split("E")
+        for gr in gr_lis:
+            gr_name = "Gr" + gr
+            if gr_name not in gr_base_info:
+                continue
+    
+            if gr_name == "Gr5" and gr_base_info[4:6] not in gr_info:
+                continue
+            
+            if gr_name == "Gr6" or gr_name == "Gr7":
+                if gr_base_info[4:len(gr_base_info)-1] not in gr_info:
+                    continue
+                
+            starting_asset_set.add((starting_asset,onbatch))
+    df_starting_relation = pd.read_excel(starting_point_merge_path,sheet_name="‹N“_‘YŠÖ˜A«",header=1)
+    df_starting_relation.fillna("",inplace=True)
+    for source_to,gr_info in zip(df_starting_relation["ŒÄoæ‘Y"],df_starting_relation["Group•ª—Ş(JSI‰ğ“š)"]):
+        if gr_info.startswith("~"):
+            continue
+        if "(" not in gr_info:
+            print("Group info format is not matched {},{},{}".format(starting_asset,onbatch,gr_info))
+            continue
+        
+        gr_lis = gr_info[:gr_info.find("(")].split("E")
+        for gr in gr_lis:
+            gr_name = "Gr" + gr
+            if gr_name not in gr_base_info:
+                continue
+    
+            if gr_name == "Gr5" and gr_base_info[4:6] not in gr_info:
+                continue
+            
+            if gr_name == "Gr6" or gr_name == "Gr7":
+                if gr_base_info[4:len(gr_base_info)-1] not in gr_info:
+                    continue
+                
+            starting_asset_set.add((source_to,"ON"))
+    return starting_asset_set
+    
+
+
+def make_received_asset_dic(base_path,gr_info):
+    
+    if "Gr5" in gr_info:
+        gr_info = "Gr5"
+    if "Gr6" in gr_info:
+        gr_info = "Gr6"
+    if "Gr7" in gr_info:
+        gr_info = "Gr7"
+        
+    search_path = os.path.join(base_path)
+    
+    folder_files = glob_files(search_path)
+    
+    for file_path in folder_files:
+        if "ó—Ì‘Yˆê——" not in file_path or gr_info not in file_path:
+            continue
+        
+        df_received_asset = pd.read_excel(file_path,sheet_name="ó—Ì‘Yˆê——_TOOL“ü—Í—p")
+        df_received_asset.fillna("",inplace=True)
+        
+        received_asset_dic = {}
+        for i in range(len(df_received_asset)):
+            data = df_received_asset.iloc[i].to_list()
+            source = data[0]
+            if source not in received_asset_dic:
+                received_asset_dic[source] = set()
+            
+            
+            received_asset_dic[source].add(tuple(data[1:]))
+        
+        return received_asset_dic
+
+    print("Error, there is no info of received asset of {} in {}.".format(gr_info,base_path))
+    return {}
+
+
+
+def make_starting_asset_df(base_path,gr_info):
+
+    search_path = os.path.join(base_path)
+    
+    folder_files = glob_files(search_path)
+    
+    for file_path in folder_files:
+        if "‹N“_î•ñ" not in file_path or gr_info not in file_path:
+            continue
+        
+        df_received_asset = pd.read_excel(file_path,sheet_name="TEST_À{’PˆÊ")
+        df_received_asset.fillna("",inplace=True)
+        
+        return df_received_asset
+
+    print("Error, there is no info of starting asset of {} in {}.".format(gr_info,base_path))
+    return pd.DataFrame([])
+
+def make_starting_asset_merge(related_asset_all,starting_asset_set,gr_info):
+    starting_asset_merge = set()
+    for i in range(len(related_asset_all)):
+        asset,asset_type,onbatch = related_asset_all[i][1:4]
+        starting_asset_check = "›"
+        
+        if (asset,onbatch) in starting_asset_set:
+            starting_asset_check = ""
+            
+        starting_asset_merge.add((asset,asset_type,starting_asset_check,onbatch))
+        
+    return sorted(starting_asset_merge)
+    
+
+def make_additional_screen_related_asset(screen_asset_list,gr_key,gr_info,asset_all_used_gr_set):
+    
+    if "Gr5" in gr_info:
+        gr_key = gr_info
+    if "Gr6" in gr_info:
+        gr_key = gr_info
+    if "Gr7" in gr_info:
+        gr_key = gr_info
+    
+    if gr_key in screen_asset_header:
+        gind = screen_asset_header.index(gr_key)
+    else:
+        gind = -1
+    if gind == -1:
+        print("Error group info is not found in this received asset folder")
+        return 
+    screen_asset_starting_point = set()
+    
+    additional_screen_asset_list = []
+    
+    for data in screen_asset_list:
+        if data[gind] == "":
+            continue
+        if data[-1] in asset_all_used_gr_set:
+            continue
+        screen_asset_starting_point.add((data[0],1,data[-1],"ON",""))
+        additional_screen_asset_list.append(data)
+        
+    screen_asset_starting_point = pd.DataFrame(screen_asset_starting_point,columns=all_starting_asset_header)
+
+    return additional_screen_asset_list,screen_asset_starting_point
+    
+    
+def make_search_graph(df):
+    
+    
+    asset_set = set() ### ŒÄoŒ³ or ŒÄoæ ‚Ì‘Yˆê——‚ğd•¡‚ğœ‚¢‚Äì¬‚·‚é
+
+    relation_list = set() ### ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ‚©‚çŠÖ˜A«‚Ìˆê——‚ğd•¡‚ğœ‚¢‚Äæ“¾‚·‚é
+
+    for fr,relation_type,to,received in zip(df["ŒÄoŒ³‘Y"],df["ŒÄo•û–@"],df["ŒÄoæ‘Y"],df["ó—Ì”»’è"]):
+        fr_true = check_module_name(fr)
+        asset_set.add(fr_true)
+        
+        asset_set.add(to)
+        relation_list.add((fr,relation_type,to,received))
+      
+
+    asset_set = sorted(asset_set)
+    relation_list = sorted(relation_list)
+
+    ### ƒOƒ‰ƒt‚ğì¬‚·‚éÛ‚É DXDAIKOU ‚Ì‚æ‚¤‚È–¼‘O‚ğŒ³‚É‚·‚é‚æ‚è DXDAIKOU = 1, JXDAIKOU = 2 ‚Ì‚æ‚¤‚È‘Î‰•\‚ğì‚Á‚Ä ”š‚Åˆµ‚¦‚é‚æ‚¤‚É‚µ‚½•û‚ª‚‘¬‚É“®ì‚·‚é‚½‚ß •ÏŠ·•\‚Æ‹t•ÏŠ·•\‚ğì¬‚·‚é
+
+    ### •ÏŠ·•\ name_dic["DXDAIKOU"] = 1 ‚Ì‚æ‚¤‚É –¼‘O‚©‚ç”š‚ªæ“¾‚Å‚«‚é
+    name_dic = {s:i for i,s in enumerate(asset_set)} 
+
+    ### ‹t•ÏŠ·•\ rev_name_dic[1] = "DXDAIKOU" ‚Ì‚æ‚¤‚É ”š‚©‚ç–¼‘O‚ªæ“¾‚Å‚«‚é o—Í‚ÌÛ‚Í–¼‘O‚É–ß‚·‚Ì‚Å‚»‚±‚Åg‚¤
+    rev_name_dic = {i:s for i,s in enumerate(asset_set)}
+
+    ### ƒOƒ‰ƒt‚ÉŒÄoŒ³‘Y‚©‚çŒÄoæ‘Y‚ÉŒü‚©‚¤•Ó‚Æ‚µ‚ÄŠÖ˜A«‚Ìî•ñ‚ğ’Ç‰Á‚·‚é
+    ### —á‚¦‚Î ŠÖ˜A«‚É DXDAIKOU CALL JXDAIKOU ‚ª‚ ‚Á‚½‚Æ‚«‚Í
+    ### relation_graph[1] ‚ÌƒŠƒXƒg‚É‚Í JXDAIKOU‚Ì”š 2 ‚ª“ü‚Á‚Ä relation_graph[1] = [(2,xxx),(y,zzz)] ‚İ‚½‚¢‚É‚È‚Á‚Ä‚¢‚é 
+    n = len(asset_set)
+    relation_graph = [[] for i in range(n)]
+    for i,(fr,_,to,_) in enumerate(relation_list):
+        fr_true = check_module_name(fr)
+        find = name_dic[fr_true]
+        tind = name_dic[to]
+        relation_graph[find].append((tind,i))
+        
+    return relation_graph,relation_list,name_dic,rev_name_dic,n
+
+
+def search_related_asset(starting_asset_df,relation_graph,relation_list,name_dic,rev_name_dic,n):
+    
+    ### ƒeƒXƒgÀ{’PˆÊ‚©‚ç‡”Ô‚ÉŠÖ˜A‘Y‚ğì¬‚·‚é
+    ### ‚â‚è•û‚ÍƒOƒ‰ƒt‚É‘Î‚·‚é •—Dæ’Tõ(BFS = Bred First Search) Šî–{“I‚ÍƒAƒ‹ƒSƒŠƒYƒ€‚È‚Ì‚Å•K—v‚ª‚ ‚ê‚ÎŒŸõ‚µ‚Ä‚İ‚é‚Æ—Ç‚¢‚Å‚·B
+    
+    visited_id = [-1]*n
+    visited_id_batch = [-1]*n
+    related_asset = set()
+    for i,(test_id,source,info) in enumerate(zip(starting_asset_df["TEST_ID"],starting_asset_df["ÀsJOB"],starting_asset_df["•â‘«"])):
+        ### source = ‹N“_‘Y‚ª‘YŠÖ˜A«î•ñ‚ÌŒÄoŒ³AŒÄoæ‚É‚¢‚È‚¢ê‡‚Í •ÏŠ·•\‚Å name_dic[source] ‚ÅƒAƒNƒZƒX‚·‚é‚ÆƒGƒ‰[‚É‚È‚é‚½‚ß (”z—ñŠOQÆ‚Ì‚æ‚¤‚È‚±‚Æ)AÅ‰‚Éˆ—‚·‚é
+        
+        if source not in name_dic:
+            related_asset.add((test_id,source,info))
+            continue
+        sind = name_dic[source]
+        q = deque([sind])
+        q_batch = deque([])
+        related_asset.add((test_id,source,info))
+        visited_id[sind] = i
+
+        while q:
+            now = q.pop()
+        
+            for nex,nind in relation_graph[now]:
+                
+                if visited_id[nex] == i:
+                    continue
+                visited_id[nex] = i
+ 
+                received = relation_list[nind][3]
+                info_tmp = info
+                if received == "JCL":
+                    info_tmp = "BAT"
+                nname = rev_name_dic[nex]
+
+                related_asset.add((test_id,nname,info_tmp))
+                if received == "JCL" and info != info_tmp:
+                    q_batch.append(nex)
+                else:
+                    q.append(nex)
+        
+        info_tmp = "BAT"
+        while q_batch:
+            now = q_batch.pop()
+        
+            for nex,nind in relation_graph[now]:
+                
+                if visited_id_batch[nex] == i:
+                    continue
+                visited_id_batch[nex] = i
+ 
+                received = relation_list[nind][3]
+                nname = rev_name_dic[nex]
+
+                related_asset.add((test_id,nname,info_tmp))
+                q_batch.append(nex)
+                
+
+    return related_asset
+
+
+def make_matching_related_asset_with_received_list(all_related_asset,received_asset_dic):
+    
+    related_asset_with_type_list = []
+    for test_id,asset,info in all_related_asset:
+        if asset not in received_asset_dic:
+            related_asset_with_type_list.append([test_id,asset,"",info,"","",""])
+            continue
+        
+        for data in received_asset_dic[asset]:
+            new_list = [test_id,asset,"",info]
+            new_list[2] = data[0]
+            new_list += data[1:]
+            related_asset_with_type_list.append(new_list)
+                
+    return related_asset_with_type_list
+
+   
+def make_asset_inventory_group(inventory_template_df,inventory_id_matching_dic,inventory_key_matching_dic,additional_screen_asset_list_all,starting_asset_merge_list,df_revival_asset,gr_info,adl_definition_dic,old_inventory_path):
+    
+    asset_inventory_group = inventory_template_df.values.tolist()
+    
+    batch_index = asset_inventory_header.index("ƒoƒbƒ`‘Y")
+    online_index = asset_inventory_header.index("ƒIƒ“ƒ‰ƒCƒ“‘Y")
+    asset_inventory_before_index = asset_inventory_header.index("’I‰µ”»’è(‘O‰ñ)")
+    
+    ### ‘O‰ñ‚Ì’I‰µ‘Yˆê——‚Ìî•ñ‚ğXV
+    inventory_asset_folder_path = os.path.join(old_inventory_path)
+    inventory_asset_folder_files = glob_files(inventory_asset_folder_path)
+    
+    file_name = ""
+    for invntory_asset_file in inventory_asset_folder_files:
+        if gr_info not in invntory_asset_file or "’I‰µ—p‘Yˆê——" not in invntory_asset_file:
+            continue
+        file_name = invntory_asset_file
+        
+    if file_name == "":
+        print("There is no file of path asset inventory of {}.".format(gr_info))
+    else:
+        inventory_asset_before_df = pd.read_excel(file_name,sheet_name="’I‰µ—p‘Yˆê——",header=0)
+        inventory_asset_before_df.fillna("",inplace=True)
+        inventory_asset_before_keys = inventory_asset_before_df.columns.tolist()
+
+        for i in range(len(inventory_asset_before_df)):
+            data = inventory_asset_before_df.iloc[i]
+            key,is_batch_asset,is_online_asset = data["KEY2"],data["ƒoƒbƒ`‘Y"],data["ƒIƒ“ƒ‰ƒCƒ“‘Y"]
+            if "’I‰µ”»’è" in inventory_asset_before_keys:
+                judge_inventory = data["’I‰µ”»’è"]
+            else:
+                judge_inventory = ""
+            if key not in inventory_key_matching_dic:
+                continue
+  
+            for ind in inventory_key_matching_dic[key]:
+                asset_inventory_group[ind][batch_index] = is_batch_asset
+                asset_inventory_group[ind][online_index] = is_online_asset
+                asset_inventory_group[ind][asset_inventory_before_index] = judge_inventory
+    
+    
+    judge_used_index = asset_inventory_header.index("—˜—p”»’è")
+    batch_asset_index = asset_inventory_header.index("ƒoƒbƒ`”»’è")
+    online_asset_index = asset_inventory_header.index("ƒIƒ“ƒ‰ƒCƒ“”»’è")
+    
+    batch_asset_screen_index = asset_inventory_header.index("‰æ–Ê’Ç‰ÁˆÚs‘ÎÛ‘Y(ƒoƒbƒ`—˜—p)")
+    online_asset_screen_index = asset_inventory_header.index("‰æ–Ê’Ç‰ÁˆÚs‘ÎÛ‘Y(ƒIƒ“ƒ‰ƒCƒ“—˜—p)")
+    
+    
+    ### ‰æ–Ê’Ç‰ÁˆÚs‘ÎÛ‘Y‚©‚ç‚ÌŠÖ˜A‘Y‚ÌƒIƒ“ƒoƒbƒ`î•ñ‚ÌXV
+    for screen_asset_list in additional_screen_asset_list_all:
+        asset = screen_asset_list[1]
+        onbatch = screen_asset_list[3]
+        
+        if asset not in inventory_id_matching_dic:
+            continue
+        
+        if onbatch == "ON":
+            for ind in inventory_id_matching_dic[asset]:
+                asset_inventory_group[ind][online_asset_screen_index] = "›"
+                asset_inventory_group[ind][judge_used_index] = "›"
+                asset_inventory_group[ind][online_asset_index] = "›"
+        elif onbatch == "BAT":
+            for ind in inventory_id_matching_dic[asset]:
+                asset_inventory_group[ind][batch_asset_screen_index] = "›"
+                asset_inventory_group[ind][judge_used_index] = "›"
+                asset_inventory_group[ind][batch_asset_index] = "›"
+                
+    ### ‹N“_‘Yƒ}[ƒWƒV[ƒg‚©‚ç‚ÌŠÖ˜A‘Y‚ÌƒIƒ“ƒoƒbƒ`î•ñ‚ÌXV
+    for asset_list in starting_asset_merge_list:
+        asset = asset_list[0]
+        starting_asset_check = asset_list[2]
+        onbatch = asset_list[3]
+        
+        if asset not in inventory_id_matching_dic:
+            continue
+        
+        for ind in inventory_id_matching_dic[asset]:
+            if asset_inventory_group[ind][judge_used_index] != "":
+                asset_inventory_group[ind][judge_used_index] = starting_asset_check
+                
+            if onbatch == "ON":
+                if asset_inventory_group[ind][online_asset_index] != "":
+                    asset_inventory_group[ind][online_asset_index] = starting_asset_check
+                    
+            elif onbatch == "BAT":
+                if asset_inventory_group[ind][batch_asset_index] != "":
+                    asset_inventory_group[ind][batch_asset_index] = starting_asset_check
+      
+      
+    ### •œŠˆ‘Y‚Ìî•ñ‚ÌXV              
+    revival_index = asset_inventory_header.index("•œŠˆ‘Y")
+    
+    for revival_list in df_revival_asset:
+        asset = revival_list[1]
+        
+        if asset in inventory_id_matching_dic:
+            for ind in inventory_id_matching_dic[asset]:
+                asset_inventory_group[ind][revival_index] = "›"
+                if asset_inventory_group[ind][judge_used_index] != "":
+                    asset_inventory_group[ind][judge_used_index] = "›"
+            
+        elif asset in adl_definition_dic:
+            for asset_name in adl_definition_dic[asset]:
+                if asset_name in inventory_id_matching_dic:
+                    for ind in inventory_id_matching_dic[asset_name]:
+                        asset_inventory_group[ind][revival_index] = "›"
+                        if asset_inventory_group[ind][judge_used_index] != "":
+                            asset_inventory_group[ind][judge_used_index] = "›"
+                
+    
+    asset_inventory_index = asset_inventory_header.index("’I‰µ”»’è")
+    
+    asset_system_index = asset_inventory_header.index("‘Y—˜—pƒVƒXƒeƒ€")
+    asset_need_index = asset_inventory_header.index("‘Y—v”Û(‡¬Œ‹‰Ê)")
+    asset_source_index = asset_inventory_header.index("‘Y•ª—Ş(ACN)")
+    
+    if gr_info in asset_inventory_header:
+        gr_key_index = asset_inventory_header.index(gr_info)
+    else:
+        if gr_info != "Gr1":
+            print("Error group info is something wrong at {}".format(gr_info))
+        else:
+            gr_key_index = asset_inventory_header.index("Gr1(Œ`|)")
+            
+            
+    for i in range(len(asset_inventory_group)):
+        if asset_inventory_group[i][judge_used_index] == "":
+            continue
+        
+        if asset_inventory_group[i][batch_asset_index] != "":
+            asset_inventory_group[i][batch_index] = "›"
+    
+        if asset_inventory_group[i][online_asset_index] != "":
+            asset_inventory_group[i][online_index] = "›"
+            
+        system_info = asset_inventory_group[i][asset_system_index]
+        need_info = asset_inventory_group[i][asset_need_index]
+        source_info = asset_inventory_group[i][asset_source_index]
+        
+        if system_info == "26) Šî”Õ" or system_info == "":
+            asset_inventory_group[i][asset_inventory_index] = "~ ‘Y—˜—pƒVƒXƒeƒ€: ‹ó”’ or Šî”Õ"
+            continue
+        
+        if need_info == "”p~Ï" or need_info == "‘ÎÛŠO":
+            asset_inventory_group[i][asset_inventory_index] = "~ ‘Y—v”Û: ”p~Ï or ‘ÎÛŠO"
+            continue
+        
+        if source_info == "•xm’ÊUtilityE•xm’Ê’ñ‹Ÿƒc[ƒ‹":
+            asset_inventory_group[i][asset_inventory_index] = "~ ‘Y•ª—Ş: ˜AŒg‘ÎÛŠO‘Y"
+            continue
+        
+        if asset_inventory_group[i][gr_key_index] == "":
+            asset_inventory_group[i][asset_inventory_index] = "~ Gr•ª—Ş: ‘¼Gr”»’è‘Y"
+            continue
+        
+        asset_inventory_group[i][asset_inventory_index] = "›"
+        
+        
+    return asset_inventory_group
+
+    
+def output_asset_inventory_group(inventory_template_df,inventory_id_matching_dic,inventory_key_matching_dic,screen_asset_list,starting_point_merge_path,base_path,setting_file_path,gr_key,gr_info,title,old_inventory_path):
+    
+    ### ŠÖ˜A«î•ñ‚ÆADL’è‹`‚Ìî•ñ‚ğæ“¾‚·‚é
+    relations_group_df,adl_definition_dic = make_relations_group_and_adl_definition_list(base_path,gr_info)
+    
+    ### ‹N“_‘Y‚Æ‚È‚éID‚Ìˆê——‚ğæ“¾‚·‚é
+    starting_asset_set = make_relations_group_starting_point(starting_point_merge_path,gr_info)
+    
+    ### ó—Ì‘Yˆê——‚Ìî•ñ‚ğæ“¾‚·‚é
+    received_asset_dic = make_received_asset_dic(base_path,gr_info)
+      
+    ### ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ‚©‚çƒOƒ‰ƒt‚ğì¬‚·‚é
+    relation_graph,relation_list,name_dic,rev_name_dic,n = make_search_graph(relations_group_df)
+    
+    ### Gr‚Å‚Ì‹N“_ˆê——‚ğæ“¾
+    starting_asset_df = make_starting_asset_df(base_path,gr_info)
+    
+    ### ‹N“_ˆê——‚©‚ç‚ÌŠÖ˜A‘Y‚ğæ“¾
+    all_related_asset = search_related_asset(starting_asset_df,relation_graph,relation_list,name_dic,rev_name_dic,n)
+    
+    ### ó—Ì‘Yˆê——‚Æƒ}ƒbƒ`ƒ“ƒO‚µ‚½ŠÖ˜A‘Yˆê——‚ğæ“¾
+    related_asset_with_received_info = make_matching_related_asset_with_received_list(all_related_asset,received_asset_dic)
+    
+    ### ‹N“_‘Yƒ}[ƒWƒV[ƒg—p‚Ìî•ñ‚ğæ“¾
+    starting_asset_merge_list = make_starting_asset_merge(related_asset_with_received_info,starting_asset_set,gr_info)
+    
+    ### ’Ç‰Á‘ÎÛ‰æ–Ê‘Y‚©‚ç‚Ìî•ñ‚ğæ“¾
+    asset_all_used_gr_set = set([lis[1] for lis in related_asset_with_received_info])
+    
+    additional_screen_asset_list,screen_asset_starting_point = make_additional_screen_related_asset(screen_asset_list,gr_key,gr_info,asset_all_used_gr_set)
+    
+    additional_screen_related_asset = search_related_asset(screen_asset_starting_point,relation_graph,relation_list,name_dic,rev_name_dic,n)
+    
+    additional_screen_related_asset_with_received_info = make_matching_related_asset_with_received_list(additional_screen_related_asset,received_asset_dic)
+    
+    ### •œŠˆ‘Y‚Ìî•ñ‚ğæ“¾
+    df_revival_asset = get_df_revival_asset(setting_file_path,gr_info)
+    df_revival_asset = df_revival_asset.values.tolist()
+    
+    
+    asset_inventory_gr = make_asset_inventory_group(inventory_template_df,inventory_id_matching_dic,inventory_key_matching_dic,additional_screen_related_asset_with_received_info,starting_asset_merge_list,df_revival_asset,gr_info,adl_definition_dic,old_inventory_path)  
+    
+    gr_name = gr_info
+    if "Gr5" in gr_name:
+        gr_name = "Gr5"
+    if "Gr6" in gr_name:
+        gr_name = "Gr6"
+    if "Gr7" in gr_name:
+        gr_name = "Gr7"
+        
+    file_name = "’I‰µ—p‘Yˆê——_"+gr_info+"_"+dt_now+".xlsx"
+    out_title = os.path.join(title,gr_name)
+    
+    if os.path.isdir(out_title) == False:
+        os.makedirs(out_title)
+        
+    write_excel_multi_sheet(file_name,[asset_inventory_gr,additional_screen_asset_list,additional_screen_related_asset_with_received_info,df_revival_asset,starting_asset_merge_list,related_asset_with_received_info],["’I‰µ—p‘Yˆê——","’Ç‰ÁˆÚs‘ÎÛ‰æ–Ê","’Ç‰ÁˆÚs‘ÎÛ‰æ–Ê‚©‚ç‚ÌŠÖ˜A‘Yˆê——","•œŠˆ‘Y","‹N“_‘Yƒ}[ƒW","ŠÖ˜A‘Yˆê——"],out_title,[asset_inventory_header,screen_asset_header,related_asset_header,revival_asset_header,starting_asset_merge_header,related_asset_header])
+
+ 
+def main(member_list_path, starting_point_merge_path,setting_file_path, asset_inventory_template_path,base_path,old_inventory_path,title):
+
+    if os.path.isdir(title) == False:
+        os.makedirs(title)        
+    
+    inventory_template_df,inventory_id_matching_dic,inventory_key_matching_dic = make_inventory_template(asset_inventory_template_path)
+    screen_asset_list = make_screen_asset_and_judge_from_member_list(member_list_path)
+
+    base_path_files = glob_files(base_path)
+    
+    for file_path in base_path_files:
+        if "‹N“_î•ñ" not in file_path:
+            continue
+        
+        gr_info = file_path.split("_")[1]
+        gr_key = groups_key_list[groups_info_list.index(gr_info)]
+        print("{}‚Ì’I‰µ—p‘Yˆê——‚Ìì¬‚ğŠJn‚µ‚Ü‚·B".format(gr_info))
+        output_asset_inventory_group(inventory_template_df,inventory_id_matching_dic,inventory_key_matching_dic,screen_asset_list,starting_point_merge_path,base_path,setting_file_path,gr_key,gr_info,title,old_inventory_path)
+          
+if __name__ == "__main__":
+
+    main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],sys.argv[6],sys.argv[7])
+    
+    ### ˆø”1 DBPath ˆø”2 o—ÍƒtƒHƒ‹ƒ_ 

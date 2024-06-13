@@ -1,0 +1,10 @@
+DBG/
+**/__pycache__/
+**/*.xlsx
+**/*.jar
+**/*.exe
+**/*.zip
+**/*.log
+**/*.xlsb
+**/*.pptx
+**/*.accdb

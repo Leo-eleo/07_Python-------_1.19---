@@ -1,0 +1,3438 @@
+# -*- coding: utf-8 -*-
+import sys
+
+import wx
+import wx.xrc
+import win32com.client as win32
+
+import images
+
+
+def _exit_sys(event):
+    stone = wx.MessageDialog(None, 'アプリを終了しますか？', ' ',
+                             wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION)
+    if stone.ShowModal() == wx.ID_YES:
+        stone.Destroy()
+        sys.exit()
+
+
+def on_outlook_click(event):
+    outlook = win32.Dispatch('Outlook.Application')
+    mail = outlook.CreateItem(0)
+    mail.To = "kohei.mori@accenture.com"
+    mail.Subject = ""
+    mail.HtmlBody = ""
+    mail.Display(True)
+
+
+def _get_logo():
+    logo = wx.Icon()
+    logo.CopyFromBitmap(getattr(images, "logo").GetBitmap())
+    return logo
+
+
+class MemberSplitFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞メンバー分割", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        self.GetMenuBar()
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_input = wx.StaticText(m_panel, label=u"入力フォルダ", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_dp_input = wx.DirPickerCtrl(m_panel, message=u"入力フォルダを選択ください",
+                                      style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_input.SetLabel(u"入力フォルダ")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"出力フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"出力フォルダ")
+
+        # 実行ボタン
+        m_b_jcl_out = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_input, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_input, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_jcl_out, 1, flag=wx.ALIGN_CENTER, border=10)
+
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_dp_input = m_dp_input
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_jcl_out.Bind(wx.EVT_BUTTON, self.on_jcl_out_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_out_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class JclOutFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞JCL呼出ありカタプロ一覧作成", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        self.GetMenuBar()
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_excel_out = wx.StaticText(m_panel, label=u"解析済みExcel出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_excel_out = wx.DirPickerCtrl(m_panel, message=u"解析済みExcel出力フォルダを選択ください",
+                                          style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_excel_out.SetLabel(u"解析済みExcel出力フォルダ")
+
+        # 実行ボタン
+        m_b_jcl_out = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_excel_out, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_excel_out, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_jcl_out, 1, flag=wx.ALIGN_CENTER, border=10)
+
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_excel_out = m_dp_excel_out
+
+        # Connect Events
+        m_b_jcl_out.Bind(wx.EVT_BUTTON, self.on_jcl_out_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_out_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class CobolFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞PGM解析＞COBOL解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 400), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_cobol = wx.StaticText(m_panel, label=u"COBOLパス", style=wx.ALIGN_LEFT)
+        m_st_db_out = wx.StaticText(m_panel, label=u"解析済みDB出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_cobol = wx.DirPickerCtrl(m_panel, message=u"COBOL資源フォルダを選択ください",
+                                      style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_cobol.SetLabel(u"COBOLパス")
+
+        m_dp_db_out = wx.DirPickerCtrl(m_panel, message=u"解析済みDB出力フォルダを選択ください",
+                                       style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_db_out.SetLabel(u"解析済みDB出力フォルダ")
+
+        # 実行ボタン
+        m_b_cobol = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_cobol, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_cobol, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_db_out, pos=(4, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_db_out, pos=(4, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_cobol, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(5, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_cobol = m_dp_cobol
+        self.m_dp_db_out = m_dp_db_out
+
+        # Connect Events
+        m_b_cobol.Bind(wx.EVT_BUTTON, self.on_cobol_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_cobol_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class NaturalFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞PGM解析＞Natural解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 400), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_natrual = wx.StaticText(m_panel, label=u"Naturalパス", style=wx.ALIGN_LEFT)
+        m_st_db_out = wx.StaticText(m_panel, label=u"解析済みDB出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_natrual = wx.DirPickerCtrl(m_panel, message=u"Natural資源フォルダを選択ください",
+                                        style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_natrual.SetLabel(u"Naturalパス")
+
+        m_dp_db_out = wx.DirPickerCtrl(m_panel, message=u"解析済みDB出力フォルダを選択ください",
+                                       style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_db_out.SetLabel(u"解析済みDB出力フォルダ")
+
+        # 実行ボタン
+        m_b_cobol = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_natrual, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_natrual, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_db_out, pos=(4, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_db_out, pos=(4, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_cobol, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(5, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_natrual = m_dp_natrual
+        self.m_dp_db_out = m_dp_db_out
+
+        # Connect Events
+        m_b_cobol.Bind(wx.EVT_BUTTON, self.on_natrual_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_natrual_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+
+class ClistFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞PGM解析＞Clist解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 400), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_clist = wx.StaticText(m_panel, label=u"Clistパス", style=wx.ALIGN_LEFT)
+        m_st_db_out = wx.StaticText(m_panel, label=u"解析済みDB出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_clist = wx.DirPickerCtrl(m_panel, message=u"Clist資源フォルダを選択ください",
+                                        style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_clist.SetLabel(u"Clistパス")
+
+        m_dp_db_out = wx.DirPickerCtrl(m_panel, message=u"解析済みDB出力フォルダを選択ください",
+                                       style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_db_out.SetLabel(u"解析済みDB出力フォルダ")
+
+        # 実行ボタン
+        m_b_cobol = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_clist, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_clist, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_db_out, pos=(4, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_db_out, pos=(4, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_cobol, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(5, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_clist = m_dp_clist
+        self.m_dp_db_out = m_dp_db_out
+
+        # Connect Events
+        m_b_cobol.Bind(wx.EVT_BUTTON, self.on_clist_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_clist_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+
+
+class NativePliFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞PGM解析＞PLI解析＞NativePLIソース整形",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        self.GetMenuBar()
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_input = wx.StaticText(m_panel, label=u"入力フォルダ", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_dp_input = wx.DirPickerCtrl(m_panel, message=u"入力フォルダを選択ください",
+                                      style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_input.SetLabel(u"入力フォルダ")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"出力フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"出力フォルダ")
+
+        # 実行ボタン
+        m_b_jcl_out = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_input, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_input, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_jcl_out, 1, flag=wx.ALIGN_CENTER, border=10)
+
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_dp_input = m_dp_input
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_jcl_out.Bind(wx.EVT_BUTTON, self.on_jcl_out_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_out_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class RationalizationFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞PGM解析＞PLI解析＞PLIソース解析",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 400), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_pli = wx.StaticText(m_panel, label=u"PLIパス", style=wx.ALIGN_LEFT)
+        m_st_db_out = wx.StaticText(m_panel, label=u"解析済みDB出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_pli = wx.DirPickerCtrl(m_panel, message=u"PLI資源フォルダを選択ください",
+                                        style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_pli.SetLabel(u"PLIパス")
+
+        m_dp_db_out = wx.DirPickerCtrl(m_panel, message=u"解析済みDB出力フォルダを選択ください",
+                                       style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_db_out.SetLabel(u"解析済みDB出力フォルダ")
+
+        # 実行ボタン
+        m_b_cobol = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_pli, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_pli, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_db_out, pos=(4, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_db_out, pos=(4, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_cobol, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(5, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_pli = m_dp_pli
+        self.m_dp_db_out = m_dp_db_out
+
+        # Connect Events
+        m_b_cobol.Bind(wx.EVT_BUTTON, self.on_pli_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_pli_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class PliCmdFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞PGM解析＞PLI解析＞呼ぶ関係抽出",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        self.GetMenuBar()
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_input = wx.StaticText(m_panel, label=u"入力ファイル", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_input = wx.FilePickerCtrl(m_panel, message=u"入力用ファイル選択", wildcard=u"*.xlsx;*.xlsm",
+                                       style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_input.SetLabel(u"出力用ファイル")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"出力フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"出力フォルダ")
+
+        # 実行ボタン
+        m_b_jcl_out = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_input, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_input, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_jcl_out, 1, flag=wx.ALIGN_CENTER, border=10)
+
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_input = m_fp_input
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_jcl_out.Bind(wx.EVT_BUTTON, self.on_jcl_out_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_out_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class PliFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞PGM解析＞PLI解析", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 460), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_native = wx.Button(m_panel, label=u"NativePLIソース整形", style=wx.BU_EXACTFIT)
+        # m_b_pli = wx.Button(m_panel, label=u"PLI論理化ソース生成", style=wx.BU_EXACTFIT)
+        m_b_rationalization = wx.Button(m_panel, label=u"PLIソース解析", style=wx.BU_EXACTFIT)
+        m_b_relationship = wx.Button(m_panel, label=u"呼ぶ関係抽出", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_native, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        # m_gb_sizer.Add(m_b_pli, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_rationalization, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_relationship, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=15)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_native.Bind(wx.EVT_BUTTON, self.on_native_click)
+        # m_b_pli.Bind(wx.EVT_BUTTON, self.on_pli_click)
+        m_b_rationalization.Bind(wx.EVT_BUTTON, self.on_rationalization_click)
+        m_b_relationship.Bind(wx.EVT_BUTTON, self.on_relationship_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_native_click(self, event):
+        event.Skip()
+
+    # def on_pli_click(self, event):
+    #     event.Skip()
+
+    def on_rationalization_click(self, event):
+        event.Skip()
+
+    def on_relationship_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class PgmFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞PGM解析", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 460), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_cobol = wx.Button(m_panel, label=u"COBOL解析", style=wx.BU_EXACTFIT)
+        m_b_pli = wx.Button(m_panel, label=u"PLI解析", style=wx.BU_EXACTFIT)
+        m_b_natural = wx.Button(m_panel, label=u"Natural解析", style=wx.BU_EXACTFIT)
+        m_b_clist = wx.Button(m_panel, label=u"Clist解析", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_cobol, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_pli, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_natural, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_clist, pos=(4, 0), flag=wx.EXPAND | wx.ALL, border=15)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_cobol.Bind(wx.EVT_BUTTON, self.on_cobol_click)
+        m_b_pli.Bind(wx.EVT_BUTTON, self.on_pli_click)
+        m_b_natural.Bind(wx.EVT_BUTTON, self.on_natural_click)
+        m_b_clist.Bind(wx.EVT_BUTTON, self.on_clist_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_cobol_click(self, event):
+        event.Skip()
+
+    def on_pli_click(self, event):
+        event.Skip()
+
+    def on_natural_click(self, event):
+        event.Skip()
+
+    def on_clist_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class SysinFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞外部SYSIN取り込み", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_sysin = wx.StaticText(m_panel, label=u"SYSINパス", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_sysin = wx.DirPickerCtrl(m_panel, message=u"SYSIN資源フォルダを選択ください",
+                                      style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_sysin.SetLabel(u"SYSINパス")
+
+        # 実行ボタン
+        m_b_sysin = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_sysin, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_sysin, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_sysin, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_sysin = m_dp_sysin
+
+        # Connect Events
+        m_b_sysin.Bind(wx.EVT_BUTTON, self.on_sysin_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_sysin_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class ProcFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞PROC解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_proc = wx.StaticText(m_panel, label=u"カタプロパス", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_proc = wx.DirPickerCtrl(m_panel, message=u"カタプロ資源フォルダを選択ください",
+                                     style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_proc.SetLabel(u"カタプロパス")
+
+        # 実行ボタン
+        m_b_proc = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_proc, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_proc, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_proc, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_proc = m_dp_proc
+
+        # Connect Events
+        m_b_proc.Bind(wx.EVT_BUTTON, self.on_proc_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_proc_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class JclFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞JCL解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"言語解析DB", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_jcl = wx.StaticText(m_panel, label=u"JCL格納パス", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_analysis_db = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_analysis_db.SetLabel(u"言語解析DB")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_jcl = wx.DirPickerCtrl(m_panel, message=u"JCL資源フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_jcl.SetLabel(u"JCL格納パス")
+
+        m_b_jcl = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_analysis_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting_file, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_jcl, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_jcl, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_jcl, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_analysis_db = m_fp_analysis_db
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_jcl = m_dp_jcl
+
+        # Connect Events
+        m_b_jcl.Bind(wx.EVT_BUTTON, self.on_jcl_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class GrepFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析＞Grep検索", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        # レイアウト定義
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+
+        m_panel_gb_sizer = wx.GridBagSizer(10, 0)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(self, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイルパス", style=wx.ALIGN_LEFT)
+        m_st_output = wx.StaticText(m_panel, label=u"出力用ファイル", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルパス選択", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイルパス")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"出力フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"出力フォルダ")
+        # 実行ボタン
+        m_b_Result = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL, border=10)
+        m_gb_sizer.Add(m_panel, pos=(1, 1), span=(1, 2), flag=wx.EXPAND | wx.ALL)
+        m_gb_sizer.AddGrowableCol(2)
+
+        m_panel_gb_sizer.Add(m_st_setting_file, pos=(0, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_setting_file, pos=(0, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_panel_gb_sizer.Add(m_st_output, pos=(1, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_dp_out, pos=(1, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_Result, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_panel_gb_sizer.Add(vbox, pos=(2, 0), span=(2, 4), flag=wx.EXPAND | wx.ALL)
+
+        m_panel_gb_sizer.AddGrowableCol(3)
+
+        m_panel.SetSizer(m_panel_gb_sizer)
+        m_panel.Layout()
+
+        self.SetSizer(m_gb_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_Result.Bind(wx.EVT_BUTTON, self.on_result_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_result_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class AnalysisFrame(wx.Frame):
+
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 540), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_member_spilt = wx.Button(m_panel, label=u"メンバー分割", style=wx.BU_EXACTFIT)
+        m_b_jcl = wx.Button(m_panel, label=u"JCL解析", style=wx.BU_EXACTFIT)
+        m_b_proc = wx.Button(m_panel, label=u"PROC解析", style=wx.BU_EXACTFIT)
+        m_b_sysin = wx.Button(m_panel, label=u"外部SYSIN取り込み", style=wx.BU_EXACTFIT)
+        m_b_pgm = wx.Button(m_panel, label=u"PGM解析", style=wx.BU_EXACTFIT)
+        m_b_jcl_out = wx.Button(m_panel, label=u"JCL呼出ありカタプロ一覧作成", style=wx.BU_EXACTFIT)
+        m_b_grep = wx.Button(m_panel, label=u"Grep検索", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_member_spilt, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_jcl, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_proc, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_sysin, pos=(4, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_pgm, pos=(5, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_jcl_out, pos=(6, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_grep, pos=(7, 0), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_jcl.Bind(wx.EVT_BUTTON, self.on_jcl_analysis_click)
+        m_b_proc.Bind(wx.EVT_BUTTON, self.on_proc_analysis_click)
+        m_b_sysin.Bind(wx.EVT_BUTTON, self.on_sysin_analysis_click)
+        m_b_pgm.Bind(wx.EVT_BUTTON, self.on_pgm_analysis_click)
+        m_b_jcl_out.Bind(wx.EVT_BUTTON, self.on_jcl_out_click)
+        m_b_member_spilt.Bind(wx.EVT_BUTTON, self.on_member_spilt_click)
+        m_b_grep.Bind(wx.EVT_BUTTON, self.on_grep_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_analysis_click(self, event):
+        event.Skip()
+
+    def on_proc_analysis_click(self, event):
+        event.Skip()
+
+    def on_sysin_analysis_click(self, event):
+        event.Skip()
+
+    def on_pgm_analysis_click(self, event):
+        event.Skip()
+
+    def on_jcl_out_click(self, event):
+        event.Skip()
+
+    def on_member_spilt_click(self, event):
+        event.Skip()
+
+    def on_grep_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class RelevanceAnalysisFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞関連性解析＞個別関連性解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"個別関連性\n出力先フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイル")
+        m_dp_jcl = wx.DirPickerCtrl(m_panel, message=u"個別関連性出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+        m_dp_jcl.SetLabel(u"出力先フォルダ")
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_setting_file, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting_file, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_jcl, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_dp_jcl = m_dp_jcl
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class RelevanceMajiFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞関連性解析＞個別関連性マージ", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_analysis_db = wx.StaticText(m_panel, label=u"個別関連性出力\n済みフォルダ", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"関連性マージ版\n出力先フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_out = wx.DirPickerCtrl(m_panel, message=u"個別関連性出力済みフォルダを選択ください",
+                                    style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_out.SetLabel(u"個別関連性出力済みフォルダ")
+        m_dp_jcl = wx.DirPickerCtrl(m_panel, message=u"関連性マージ版出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_jcl.SetLabel(u"関連性マージ版出力先フォルダ")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_analysis_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_out, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_jcl, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_out = m_fp_out
+        self.m_dp_jcl = m_dp_jcl
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class RelevanceCompareFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞関連性解析＞関連性マージ差分出力", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_new = wx.StaticText(m_panel, label=u"新規関連性マージ版", style=wx.ALIGN_LEFT)
+        m_st_old = wx.StaticText(m_panel, label=u"旧関連性マージ版", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"関連性差分出力\n先フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_new = wx.FilePickerCtrl(m_panel, message=u"新規関連性マージ版を選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                     style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_new.SetLabel(u"新規関連性マージ版")
+        m_fp_old = wx.FilePickerCtrl(m_panel, message=u"旧関連性マージ版を選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                     style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_old.SetLabel(u"旧関連性マージ版")
+        m_dp_jcl = wx.DirPickerCtrl(m_panel, message=u"関連性差分出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_jcl.SetLabel(u"関連性差分出力先フォルダ")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_new, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_new, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_old, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_old, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_out, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_jcl, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_new = m_fp_new
+        self.m_fp_old = m_fp_old
+        self.m_dp_jcl = m_dp_jcl
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class RelevanceFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞関連性解析", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 460), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_analysis = wx.Button(m_panel, label=u"個別関連性解析", style=wx.BU_EXACTFIT)
+        m_b_maji = wx.Button(m_panel, label=u"個別関連性マージ", style=wx.BU_EXACTFIT)
+        m_b_compare = wx.Button(m_panel, label=u"関連性マージ差分出力", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_analysis, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_maji, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_compare, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=15)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_b_maji.Bind(wx.EVT_BUTTON, self.on_maji_click)
+        m_b_compare.Bind(wx.EVT_BUTTON, self.on_compare_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_maji_click(self, event):
+        event.Skip()
+
+    def on_compare_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class MainFrame(wx.Frame):
+
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 540), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        # レイアウト定義
+        m_b_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+
+        m_panel_gb_sizer = wx.GridBagSizer(10, 0)
+
+        # 文言
+        m_st1 = wx.StaticText(m_panel, label=u"※エラーが発生する場合、ツール開発担当者(kohei.mori@accenture.com)にご連絡ください。",
+                              style=wx.ALIGN_LEFT)
+        m_st1.SetFont(wx.Font(7, 75, 90, 90, False, "Meiryo"))
+        m_st1.SetForegroundColour(wx.Colour(255, 0, 0))
+        m_st1.SetCursor(wx.Cursor(wx.CURSOR_HAND))
+
+        # 実行ボタン
+        m_b_class_asset = wx.Button(m_panel, label=u"資産分類", style=wx.BU_EXACTFIT)
+        m_b_analysis_asset = wx.Button(m_panel, label=u"資産解析", style=wx.BU_EXACTFIT)
+        m_b_relevance = wx.Button(m_panel, label=u"関連性解析", style=wx.BU_EXACTFIT)
+        m_b_start = wx.Button(m_panel, label=u"起点解析", style=wx.BU_EXACTFIT)
+        m_b_arrange_data = wx.Button(m_panel, label=u"顧客データ整理", style=wx.BU_EXACTFIT)
+        m_b_machine_result = wx.Button(m_panel, label=u"資産解析結果加工", style=wx.BU_EXACTFIT)
+
+        m_panel_gb_sizer.Add(m_b_class_asset, pos=(0, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_panel_gb_sizer.Add(m_b_analysis_asset, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_panel_gb_sizer.Add(m_b_relevance, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_panel_gb_sizer.Add(m_b_start, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_panel_gb_sizer.Add(m_b_machine_result, pos=(4, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_panel_gb_sizer.Add(m_b_arrange_data, pos=(5, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_panel_gb_sizer.Add(m_st1, pos=(6, 0), flag=wx.ALL)
+
+        m_panel_gb_sizer.AddGrowableCol(0)
+
+        m_panel.SetSizer(m_panel_gb_sizer)
+        m_panel.Layout()
+
+        m_b_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        self.SetSizer(m_b_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_class_asset.Bind(wx.EVT_BUTTON, self.on_class_asset_click)
+        m_b_analysis_asset.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_b_relevance.Bind(wx.EVT_BUTTON, self.on_relevance_click)
+        m_b_start.Bind(wx.EVT_BUTTON, self.on_start_click)
+        m_b_arrange_data.Bind(wx.EVT_BUTTON, self.on_arrange_data_click)
+        m_b_machine_result.Bind(wx.EVT_BUTTON, self.on_machine_result_click)
+        m_st1.Bind(wx.EVT_LEFT_DOWN, on_outlook_click)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_class_asset_click(self, event):
+        event.Skip()
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_relevance_click(self, event):
+        event.Skip()
+
+    def on_start_click(self, event):
+        event.Skip()
+
+    def on_arrange_data_click(self, event):
+        event.Skip()
+
+    def on_machine_result_click(self, event):
+        event.Skip()
+
+
+class ClassAssetFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産分類", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 820), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        # レイアウト定義
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+        self.m_gb_sizer = m_gb_sizer
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        self.m_panel = m_panel
+
+        m_panel_gb_sizer = wx.GridBagSizer(10, 0)
+        self.m_panel_gb_sizer = m_panel_gb_sizer
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(self, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_input = wx.StaticText(m_panel, label=u"資産入力フォルダ", style=wx.ALIGN_LEFT)
+        m_st_output = wx.StaticText(m_panel, label=u"結果出力フォルダ", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイルパス", style=wx.ALIGN_LEFT)
+        m_st_db_boll = wx.StaticText(m_panel, label=u"実行前に関連TABLEクリアする ", style=wx.ALIGN_LEFT)
+        m_st_db_path = wx.StaticText(m_panel, label=u"DBパス", style=wx.ALIGN_LEFT)
+        m_st_folder_check = wx.StaticText(m_panel, label=u"解析資産フォルダ構成を選択 ", style=wx.ALIGN_LEFT)
+        m_st_lib_way = wx.StaticText(m_panel, label=u"ライブラリ名判定方法 ", style=wx.ALIGN_LEFT)
+        m_st_lib_id = wx.StaticText(m_panel, label=u"ライブラリID ", style=wx.ALIGN_LEFT)
+        m_st_have_exname = wx.StaticText(m_panel, label=u"拡張子有無 ", style=wx.ALIGN_LEFT)
+        m_st_have_lib = wx.StaticText(m_panel, label=u"ライブラリ名有無 ", style=wx.ALIGN_LEFT)
+        m_st_have_member = wx.StaticText(m_panel, label=u"メンバーID有無 ", style=wx.ALIGN_LEFT)
+        m_st_clean_out_folder = wx.StaticText(m_panel, label=u"資産分類処理出力ファイルクリア", style=wx.ALIGN_LEFT)
+
+        # ! Picker(ファイル選択)
+        m_fp_input = wx.DirPickerCtrl(m_panel, message=u"入力フォルダ選択", style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_input.SetLabel(u"資産入力フォルダ")
+        m_fp_output = wx.DirPickerCtrl(m_panel, message=u"出力フォルダ選択", style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_output.SetLabel(u"結果出力フォルダ")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルパス選択", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイルパス")
+        m_fp_db_file = wx.FilePickerCtrl(m_panel, message=u"言語解析DBを選択ください", wildcard=u"*.accdb",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_db_file.SetLabel(u"言語解析DB")
+
+        # ! チェックボックス
+        m_cb_is_db_clear = wx.CheckBox(m_panel)
+        m_cb_is_db_clear.SetValue(True)
+        m_cb_is_folder_clean = wx.CheckBox(m_panel)
+        m_cb_is_folder_clean.SetValue(True)
+
+        # ! ComboBox
+        # 解析資産フォルダ構成を選択
+        list_folder_check = ["個別ライブラリ対応", "複数ライブラリ対応"]
+        combo_box_folder_check = wx.ComboBox(m_panel, -1, value="個別ライブラリ対応", choices=list_folder_check, style=wx.CB_SORT)
+        combo_box_folder_check.Bind(wx.EVT_COMBOBOX, self.check_folder_check)
+        # ライブラリ名判定方法
+        list_lib_way = ["①直接指定する", "②サブフォルダ名を利用", "③ファイル名から取得"]
+        combo_box_lib_way = wx.ComboBox(m_panel, -1, value="③ファイル名から取得", choices=list_lib_way, style=wx.CB_SORT)
+        combo_box_lib_way.Bind(wx.EVT_COMBOBOX, self.check_lib_way)
+        # 拡張子有無
+        list_exname = ["①なし", "②あり（右端)"]
+        combo_box_exname = wx.ComboBox(m_panel, -1, value="②あり（右端", choices=list_exname, style=wx.CB_SORT)
+        # ライブラリ名有無
+        list_have_lib = ["①なし", "②あり_正式名"]
+        combo_box_hava_lib = wx.ComboBox(m_panel, -1, value="②あり_正式名", choices=list_have_lib, style=wx.CB_SORT)
+        # メンバーID有無
+        list_have_member = ["①なし", "②あり_正式名"]
+        combo_box_hava_member = wx.ComboBox(m_panel, -1, value="②あり_正式名", choices=list_have_member, style=wx.CB_SORT)
+
+
+        # ! 実行ボタン
+        m_b_Class = wx.Button(m_panel, label=u"分類実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        # ! TextInput
+        text_ctrl_lib_id = wx.TextCtrl(m_panel, -1, style=0)
+
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL, border=10)
+        m_gb_sizer.Add(m_panel, pos=(1, 1), span=(1, 2), flag=wx.EXPAND | wx.ALL)
+        m_gb_sizer.AddGrowableCol(2)
+
+        # 入力フォルダ
+        m_panel_gb_sizer.Add(m_st_input, pos=(0, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_input, pos=(0, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.m_fp_input = m_fp_input
+        # 出力フォルダ
+        m_panel_gb_sizer.Add(m_st_output, pos=(1, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_output, pos=(1, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.m_fp_output = m_fp_output
+        # 設定ファイルパス
+        m_panel_gb_sizer.Add(m_st_setting_file, pos=(2, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_setting_file, pos=(2, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.m_fp_setting_file = m_fp_setting_file
+        # ! DBパス
+        m_panel_gb_sizer.Add(m_st_db_path, pos=(3, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_db_file, pos=(3, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.m_fp_db_file = m_fp_db_file
+        # ! 解析資産フォルダ構成を選択
+        m_panel_gb_sizer.Add(m_st_folder_check, pos=(4, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(combo_box_folder_check, pos=(4, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.combo_box_folder_check = combo_box_folder_check
+        # ! ライブラリ名判定方法
+        m_panel_gb_sizer.Add(m_st_lib_way, pos=(5, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(combo_box_lib_way, pos=(5, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.combo_box_lib_way = combo_box_lib_way
+        # ! ライブラリID
+        m_panel_gb_sizer.Add(m_st_lib_id, pos=(6, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(text_ctrl_lib_id, pos=(6, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        text_ctrl_lib_id.SetValue("NA")
+        self.text_ctrl_lib_id = text_ctrl_lib_id
+        self.m_st_lib_id = m_st_lib_id
+        m_st_lib_id.Hide()
+        text_ctrl_lib_id.Hide()
+        # ! 拡張子有無
+        m_panel_gb_sizer.Add(m_st_have_exname, pos=(7, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(combo_box_exname, pos=(7, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.combo_box_exname = combo_box_exname
+        # ! ライブラリ名有無
+        m_panel_gb_sizer.Add(m_st_have_lib, pos=(8, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(combo_box_hava_lib, pos=(8, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.combo_box_hava_lib = combo_box_hava_lib
+        # ! メンバーID有無
+        m_panel_gb_sizer.Add(m_st_have_member, pos=(9, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(combo_box_hava_member, pos=(9, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+        self.combo_box_hava_member = combo_box_hava_member
+        # ! RadioButton
+        m_panel_gb_sizer.Add(m_st_db_boll, pos=(10, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_cb_is_db_clear, pos=(10, 1), flag=wx.EXPAND | wx.ALL, border=10)
+        self.m_cb_is_db_clear = m_cb_is_db_clear
+        m_panel_gb_sizer.Add(m_st_clean_out_folder, pos=(11, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_cb_is_folder_clean, pos=(11, 1), flag=wx.EXPAND | wx.ALL, border=10)
+        self.m_cb_is_folder_clean = m_cb_is_folder_clean
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_Class, -1, flag=wx.ALIGN_CENTER, border=10)
+        m_panel_gb_sizer.Add(vbox, pos=(12, 0), span=(2, 4), flag=wx.EXPAND | wx.ALL)
+
+        m_panel_gb_sizer.AddGrowableCol(3)
+
+        m_panel.SetSizer(m_panel_gb_sizer)
+        m_panel.Layout()
+
+        self.SetSizer(m_gb_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+
+
+
+        self.m_cb_is_db_clear = m_cb_is_db_clear
+
+        # Connect Events
+        m_b_Class.Bind(wx.EVT_BUTTON, self.on_asset_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def check_lib_way(self, event):
+        if self.combo_box_lib_way.GetValue() == "①直接指定する":
+            self.text_ctrl_lib_id.Show()
+            self.m_st_lib_id.Show()
+        else:
+            self.text_ctrl_lib_id.Hide()
+            self.m_st_lib_id.Hide()
+        self.m_panel.SetSizer(self.m_panel_gb_sizer)
+        self.m_gb_sizer.Layout()
+        self.m_panel.Layout()
+
+    def check_folder_check(self, event):
+        if self.combo_box_folder_check.GetValue() == "複数ライブラリ対応":
+            self.combo_box_lib_way.SetValue("②サブフォルダ名を利用")
+            self.combo_box_lib_way.SetBackgroundColour("yellow")
+            self.combo_box_hava_lib.SetValue("①なし")
+            self.combo_box_hava_lib.SetBackgroundColour("yellow")
+        else:
+            self.combo_box_lib_way.SetValue("③ファイル名から取得")
+            self.combo_box_lib_way.SetBackgroundColour("white")
+            self.combo_box_hava_lib.SetValue("②あり_正式名")
+            self.combo_box_hava_lib.SetBackgroundColour("white")
+        self.combo_box_lib_way.Refresh()
+        self.combo_box_hava_lib.Refresh()
+        self.m_panel.Layout()
+
+    def on_asset_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class ResultFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞顧客データ整理＞解析結果整理", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 400), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        # レイアウト定義
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+
+        m_panel_gb_sizer = wx.GridBagSizer(10, 0)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(self, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_input = wx.StaticText(m_panel, label=u"入力用ファイル", style=wx.ALIGN_LEFT)
+        m_st_output = wx.StaticText(m_panel, label=u"出力用ファイル", style=wx.ALIGN_LEFT)
+        m_st_setting_file = wx.StaticText(m_panel, label=u"設定ファイルパス", style=wx.ALIGN_LEFT)
+        m_st_db_bol = wx.StaticText(m_panel, label=u"既存DB削除 ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_input = wx.FilePickerCtrl(m_panel, message=u"入力用ファイル選択", wildcard=u"*.accdb;*.xlsx;*.xlsm",
+                                       style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_input.SetLabel(u"出力用ファイル")
+        m_fp_output = wx.FilePickerCtrl(m_panel, message=u"出力用ファイル選択", wildcard=u"*.accdb;*.xlsx;*.xlsm",
+                                        style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_output.SetLabel(u"出力用ファイル")
+        m_fp_setting_file = wx.FilePickerCtrl(m_panel, message=u"設定ファイルパス選択", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting_file.SetLabel(u"設定ファイルパス")
+        # チェックボックス
+        m_cb_is_db_clear = wx.CheckBox(m_panel, label=u"DBの既存データをクリアする場合、チェックを入れる")
+        m_cb_is_db_clear.SetValue(True)
+
+        # 実行ボタン
+        m_b_Result = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL, border=10)
+        m_gb_sizer.Add(m_panel, pos=(1, 1), span=(1, 2), flag=wx.EXPAND | wx.ALL)
+        m_gb_sizer.AddGrowableCol(2)
+
+        m_panel_gb_sizer.Add(m_st_input, pos=(0, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_input, pos=(0, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_panel_gb_sizer.Add(m_st_output, pos=(1, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_output, pos=(1, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_panel_gb_sizer.Add(m_st_db_bol, pos=(2, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_cb_is_db_clear, pos=(2, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_panel_gb_sizer.Add(m_st_setting_file, pos=(3, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_setting_file, pos=(3, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_Result, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_panel_gb_sizer.Add(vbox, pos=(4, 0), span=(2, 4), flag=wx.EXPAND | wx.ALL)
+
+        m_panel_gb_sizer.AddGrowableCol(3)
+
+        m_panel.SetSizer(m_panel_gb_sizer)
+        m_panel.Layout()
+
+        self.SetSizer(m_gb_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_input = m_fp_input
+        self.m_fp_output = m_fp_output
+        self.m_fp_setting_file = m_fp_setting_file
+        self.m_cb_is_db_clear = m_cb_is_db_clear
+
+        # Connect Events
+        m_b_Result.Bind(wx.EVT_BUTTON, self.on_result_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_result_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class JclResultFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞顧客データ整理＞JCL解析結果", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        # レイアウト定義
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+
+        m_panel_gb_sizer = wx.GridBagSizer(10, 0)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(self, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_jcl_db = wx.StaticText(m_panel, label=u"JCL解析済み\nDB一覧パス", style=wx.ALIGN_LEFT)
+        m_st_output = wx.StaticText(m_panel, label=u"JCL解析結果マージ版\n出力先フォルダ", style=wx.ALIGN_LEFT)
+
+        m_dp_jcl_db = wx.DirPickerCtrl(m_panel, message=u"JCL解析済みDB一覧パス選択", style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_jcl_db.SetLabel(u"JCL解析済みDB一覧パス")
+
+        m_fp_output = wx.DirPickerCtrl(m_panel, message=u"JCL解析結果マージ版出力用データ選択",
+                                       style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_output.SetLabel(u"JCL解析結果マージ版出力先フォルダ")
+
+        # 実行ボタン
+        m_b_Jcl_Result = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL, border=10)
+        m_gb_sizer.Add(m_panel, pos=(1, 1), span=(1, 2), flag=wx.EXPAND | wx.ALL)
+        m_gb_sizer.AddGrowableCol(2)
+
+        m_panel_gb_sizer.Add(m_st_jcl_db, pos=(0, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_dp_jcl_db, pos=(0, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_panel_gb_sizer.Add(m_st_output, pos=(1, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_output, pos=(1, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_Jcl_Result, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_panel_gb_sizer.Add(vbox, pos=(2, 0), span=(2, 4), flag=wx.EXPAND | wx.ALL)
+
+        m_panel_gb_sizer.AddGrowableCol(3)
+
+        m_panel.SetSizer(m_panel_gb_sizer)
+        m_panel.Layout()
+
+        self.SetSizer(m_gb_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_output = m_fp_output
+        self.m_dp_jcl_db = m_dp_jcl_db
+
+        # Connect Events
+        m_b_Jcl_Result.Bind(wx.EVT_BUTTON, self.on_jcl_result_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_result_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class CobolResultFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞顧客データ整理＞COBOL解析結果", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        # レイアウト定義
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+
+        m_panel_gb_sizer = wx.GridBagSizer(10, 0)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(self, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_cobol_db = wx.StaticText(m_panel, label=u"COBOL解析済み\nDB一覧パス", style=wx.ALIGN_LEFT)
+        m_st_output = wx.StaticText(m_panel, label=u"COBOL解析結果マージ版\n出力先フォルダ", style=wx.ALIGN_LEFT)
+        m_st_call = wx.StaticText(m_panel, label=u"CALL命令限定", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_dp_cobol_db = wx.DirPickerCtrl(m_panel, message=u"COBOL解析済みDB一覧パス選択",
+                                         style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_cobol_db.SetLabel(u"COBOL解析済みDB一覧パス")
+
+        m_fp_output = wx.DirPickerCtrl(m_panel, message=u"COBOL解析結果マージ版出力先フォルダ選択",
+                                       style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_output.SetLabel(u"COBOL解析結果マージ版出力先フォルダ")
+
+        m_cb_is_call_output = wx.CheckBox(m_panel, label=u"COBOL_CMD情報からCALL命令のみを抽出する場合、チェックを入れる")
+        m_cb_is_call_output.SetValue(True)
+
+        # 実行ボタン
+        m_b_Cobol_Result = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL, border=10)
+        m_gb_sizer.Add(m_panel, pos=(1, 1), span=(1, 2), flag=wx.EXPAND | wx.ALL)
+        m_gb_sizer.AddGrowableCol(2)
+
+        m_panel_gb_sizer.Add(m_st_cobol_db, pos=(0, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_dp_cobol_db, pos=(0, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_panel_gb_sizer.Add(m_st_output, pos=(1, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_fp_output, pos=(1, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_panel_gb_sizer.Add(m_st_call, pos=(2, 0), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_panel_gb_sizer.Add(m_cb_is_call_output, pos=(2, 1), span=(1, 3), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_Cobol_Result, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_panel_gb_sizer.Add(vbox, pos=(3, 0), span=(2, 4), flag=wx.EXPAND | wx.ALL)
+
+        m_panel_gb_sizer.AddGrowableCol(3)
+
+        m_panel.SetSizer(m_panel_gb_sizer)
+        m_panel.Layout()
+
+        self.SetSizer(m_gb_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_output = m_fp_output
+        self.m_dp_cobol_db = m_dp_cobol_db
+        self.m_cb_is_call_output = m_cb_is_call_output
+
+        # Connect Events
+        m_b_Cobol_Result.Bind(wx.EVT_BUTTON, self.on_cobol_result_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_cobol_result_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class DataFrame(wx.Frame):
+
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞顧客データ整理", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 460), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_Result = wx.Button(m_panel, label=u"解析結果整理", style=wx.BU_EXACTFIT)
+        m_b_Jcl_Result = wx.Button(m_panel, label=u"JCL解析結果マージ", style=wx.BU_EXACTFIT)
+        m_b_Cobol_Result = wx.Button(m_panel, label=u"COBOL解析結果マージ", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_Result, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_Jcl_Result, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_Cobol_Result, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=15)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_Result.Bind(wx.EVT_BUTTON, self.on_result_click)
+        m_b_Jcl_Result.Bind(wx.EVT_BUTTON, self.on_jcl_result_click)
+        m_b_Cobol_Result.Bind(wx.EVT_BUTTON, self.on_cobol_result_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+        # Virtual event handlers, overide them in your derived class
+
+    def on_result_click(self, event):
+        event.Skip()
+
+    def on_jcl_result_click(self, event):
+        event.Skip()
+
+    def on_cobol_result_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class MachineDbFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞顧客用DBデータ準備", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_db_out = wx.StaticText(m_panel, label=u"資産解析済み\nDB格納フォルダ", style=wx.ALIGN_LEFT)
+        m_st_bol = wx.StaticText(m_panel, label=u"DB初期化", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_db_out = wx.DirPickerCtrl(m_panel, message=u"資産解析済みDB格納フォルダを選択ください",
+                                       style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_db_out.SetLabel(u"資産解析済みDB格納フォルダ")
+
+        m_cb_bol = wx.CheckBox(m_panel, label=u"顧客別DBを初期化してからデータを追加する場合、チェックを入れる")
+        m_cb_bol.SetValue(True)
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_db_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_db_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_bol, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_cb_bol, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_db_out = m_dp_db_out
+        self.m_cb_bol = m_cb_bol
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class PedDamFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞PED-DAM解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 400), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"事前解析結果\n出力先フォルダ", style=wx.ALIGN_LEFT)
+        m_st_ped = wx.StaticText(m_panel, label=u"PED格納パス", style=wx.ALIGN_LEFT)
+        m_st_definition = wx.StaticText(m_panel, label=u"定義体格納パス", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"事前解析結果出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"事前解析結果出力先フォルダ")
+        m_dp_ped = wx.DirPickerCtrl(m_panel, message=u"PED格納パスを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_ped.SetLabel(u"PED格納パス")
+        m_dp_definition = wx.DirPickerCtrl(m_panel, message=u"定義体格納パスを選択ください",
+                                           style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_definition.SetLabel(u"定義体格納パス")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_ped, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_ped, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_definition, pos=(4, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_definition, pos=(4, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(5, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+        self.m_dp_ped = m_dp_ped
+        self.m_dp_definition = m_dp_definition
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class MachineBeforeFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞資産解析結果加工事前解析", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"事前解析結果\n出力先フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"事前解析結果出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"事前解析結果出力先フォルダ")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class OnlineReceiptFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成＞受領資産一覧登録",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"受領資産一覧", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.FilePickerCtrl(m_panel, message=u"受領資産一覧を選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                     style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"受領資産一覧")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class OnlineCustomerFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成＞顧客別資産関連性登録",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_maji = wx.StaticText(m_panel, label=u"関連性マージ版", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                     style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"設定ファイル")
+        m_dp_maji = wx.FilePickerCtrl(m_panel, message=u"関連性マージ版を選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                      style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_maji.SetLabel(u"関連性マージ版")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_maji, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_maji, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+        self.m_dp_maji = m_dp_maji
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class OnlineStartFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成＞起点資産分割",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_setting = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"起点資産分割後\n出力先フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_dp_setting = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                         style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_setting.SetLabel(u"設定ファイル")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"起点資産分割後出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"起点資産分割後出力先フォルダ")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_setting, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_setting, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_dp_setting = m_dp_setting
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class OnlineTestFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成＞テスト実施単位登録",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"テスト実施単位\nファイル", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.FilePickerCtrl(m_panel, message=u"テスト実施単位ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                     style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"テスト実施単位ファイル")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class OnlineAssetsFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成＞資産階層図出力",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"階層図出力先\nフォルダ", style=wx.ALIGN_LEFT)
+        m_st_bol = wx.StaticText(m_panel, label=u"作成ファイル分割", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"階層図出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"階層図出力先フォルダ")
+
+        m_cb_bol = wx.CheckBox(m_panel, label=u"起点資産ごとに出力ファイルを分割する場合、チェックを入れる")
+        m_cb_bol.SetValue(True)
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_bol, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_cb_bol, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+        self.m_cb_bol = m_cb_bol
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class OnlineRelatedFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成＞関連資産出力",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"関連資産出力先\nフォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"関連資産出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"関連資産出力先フォルダ")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class StarumFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成＞逆階層図出力", pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+        self.GetMenuBar()
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_input = wx.StaticText(m_panel, label=u"資産関連性調査結果", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"出力フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_input = wx.FilePickerCtrl(m_panel, message=u"資産関連性調査結果を選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                              style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_input.SetLabel(u"資産関連性調査結果")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"出力フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"出力フォルダ")
+
+        # 実行ボタン
+        m_b_jcl_out = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_input, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_input, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_jcl_out, 1, flag=wx.ALIGN_CENTER, border=10)
+
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_input = m_fp_input
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_jcl_out.Bind(wx.EVT_BUTTON, self.on_jcl_out_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_jcl_out_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class MachineOnlineFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞オンライン解析結果作成", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 550), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_receipt = wx.Button(m_panel, label=u"受領資産一覧登録", style=wx.BU_EXACTFIT)
+        m_b_customer = wx.Button(m_panel, label=u"顧客別資産関連性登録", style=wx.BU_EXACTFIT)
+        m_b_start = wx.Button(m_panel, label=u"起点資産分割", style=wx.BU_EXACTFIT)
+        m_b_test = wx.Button(m_panel, label=u"テスト実施単位登録", style=wx.BU_EXACTFIT)
+        m_b_assets = wx.Button(m_panel, label=u"資産階層図出力", style=wx.BU_EXACTFIT)
+        m_b_stratum = wx.Button(m_panel, label=u"逆階層図出力", style=wx.BU_EXACTFIT)
+        m_b_related = wx.Button(m_panel, label=u"関連資産出力", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_receipt, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_customer, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_start, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_test, pos=(4, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_assets, pos=(5, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_stratum, pos=(6, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_related, pos=(7, 0), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_receipt.Bind(wx.EVT_BUTTON, self.on_receipt_click)
+        m_b_customer.Bind(wx.EVT_BUTTON, self.on_customer_click)
+        m_b_start.Bind(wx.EVT_BUTTON, self.on_start_click)
+        m_b_test.Bind(wx.EVT_BUTTON, self.on_test_click)
+        m_b_assets.Bind(wx.EVT_BUTTON, self.on_assets_click)
+        m_b_stratum.Bind(wx.EVT_BUTTON, self.on_stratum_click)
+        m_b_related.Bind(wx.EVT_BUTTON, self.on_related_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_receipt_click(self, event):
+        event.Skip()
+
+    def on_customer_click(self, event):
+        event.Skip()
+
+    def on_start_click(self, event):
+        event.Skip()
+
+    def on_test_click(self, event):
+        event.Skip()
+
+    def on_assets_click(self, event):
+        event.Skip()
+
+    def on_stratum_click(self, event):
+        event.Skip()
+
+    def on_related_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class BatchDataFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞バッチ解析結果作成＞DATA_DSN情報登録",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"DATA_DSN\n情報一覧", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.FilePickerCtrl(m_panel, message=u"DATA_DSN情報一覧を選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                     style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"DATA_DSN情報一覧")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class BatchStartFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞バッチ解析結果作成＞起点資産分割",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_setting = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"起点資産分割後\n出力先フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_setting = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                         style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting.SetLabel(u"設定ファイル")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"起点資産分割後出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"起点資産分割後出力先フォルダ")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_setting, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_setting = m_fp_setting
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class BatchTestFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞バッチ解析結果作成＞テスト実施単位登録",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 300), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"テスト実施単位\nファイル", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_dp_out = wx.FilePickerCtrl(m_panel, message=u"テスト実施単位ファイル", wildcard=u"*.xlsx;*.xlsm",
+                                     style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"テスト実施単位ファイル")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(3, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class BatchOutFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞バッチ解析結果作成＞バッチ入出力情報出力",
+                          pos=wx.DefaultPosition,
+                          size=wx.Size(800, 350), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(9, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 文言
+        m_st_customer_db = wx.StaticText(m_panel, label=u"顧客別DB", style=wx.ALIGN_LEFT)
+        m_st_setting = wx.StaticText(m_panel, label=u"設定ファイル", style=wx.ALIGN_LEFT)
+        m_st_out = wx.StaticText(m_panel, label=u"バッチ入出力情報\n出力先フォルダ", style=wx.ALIGN_LEFT)
+
+        # Picker(ファイル選択)
+        m_fp_customer_db = wx.FilePickerCtrl(m_panel, message=u"顧客別DBを選択ください", wildcard=u"*.accdb",
+                                             style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_customer_db.SetLabel(u"顧客別DB")
+        m_fp_setting = wx.FilePickerCtrl(m_panel, message=u"設定ファイルを選択ください", wildcard=u"*.xlsx;*.xlsm",
+                                         style=wx.FLP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_fp_setting.SetLabel(u"設定ファイル")
+        m_dp_out = wx.DirPickerCtrl(m_panel, message=u"バッチ入出力情報出力先フォルダを選択ください",
+                                    style=wx.DIRP_DEFAULT_STYLE | wx.DIRP_SMALL)
+        m_dp_out.SetLabel(u"バッチ入出力情報出力先フォルダ")
+
+        m_b_analysis = wx.Button(m_panel, label=u"解析実行", size=(200, 30), style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_st_customer_db, pos=(1, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_customer_db, pos=(1, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_setting, pos=(2, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_fp_setting, pos=(2, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_st_out, pos=(3, 1), flag=wx.ALIGN_CENTER_VERTICAL | wx.ALL)
+        m_gb_sizer.Add(m_dp_out, pos=(3, 2), span=(1, 5), flag=wx.EXPAND | wx.ALL, border=10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(m_b_analysis, 1, flag=wx.ALIGN_CENTER, border=10)
+        m_gb_sizer.Add(vbox, pos=(4, 1), span=(2, 6), flag=wx.EXPAND | wx.ALL)
+
+        m_gb_sizer.AddGrowableCol(6)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.m_fp_customer_db = m_fp_customer_db
+        self.m_fp_setting = m_fp_setting
+        self.m_dp_out = m_dp_out
+
+        # Connect Events
+        m_b_analysis.Bind(wx.EVT_BUTTON, self.on_analysis_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_analysis_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class MachineBatchFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工＞バッチ解析結果作成", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 460), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_data = wx.Button(m_panel, label=u"DATA_DSN情報登録", style=wx.BU_EXACTFIT)
+        m_b_start = wx.Button(m_panel, label=u"起点資産分割", style=wx.BU_EXACTFIT)
+        m_b_test = wx.Button(m_panel, label=u"テスト実施単位登録", style=wx.BU_EXACTFIT)
+        m_b_out = wx.Button(m_panel, label=u"バッチ入出力情報出力", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_data, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_start, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_test, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=15)
+        m_gb_sizer.Add(m_b_out, pos=(4, 0), flag=wx.EXPAND | wx.ALL, border=15)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_data.Bind(wx.EVT_BUTTON, self.on_data_click)
+        m_b_start.Bind(wx.EVT_BUTTON, self.on_start_click)
+        m_b_test.Bind(wx.EVT_BUTTON, self.on_test_click)
+        m_b_out.Bind(wx.EVT_BUTTON, self.on_batch_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_data_click(self, event):
+        event.Skip()
+
+    def on_start_click(self, event):
+        event.Skip()
+
+    def on_test_click(self, event):
+        event.Skip()
+
+    def on_batch_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()
+
+
+class MachineFrame(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"棚卸サポート＞資産解析結果加工", pos=wx.DefaultPosition,
+                          size=wx.Size(460, 500), style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
+
+        # logo設定
+        self.SetIcon(_get_logo())
+
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour('TURQUOISE')
+
+        m_bx_sizer = wx.BoxSizer(wx.VERTICAL)
+        m_gb_sizer = wx.GridBagSizer(10, 0)
+
+        m_panel = wx.Panel(self)
+        m_panel.SetFont(wx.Font(12, 70, 90, 90, False, "Meiryo"))
+        m_bx_sizer.Add(m_panel, 1, wx.EXPAND | wx.ALL, 10)
+
+        # 戻るボタン
+        m_bb_back = wx.BitmapButton(m_panel, bitmap=getattr(images, "back").GetBitmap())
+
+        # 実行ボタン
+        m_b_db = wx.Button(m_panel, label=u"顧客用DBデータ準備", style=wx.BU_EXACTFIT)
+        m_b_ped_dam = wx.Button(m_panel, label=u"PED-DAM解析", style=wx.BU_EXACTFIT)
+        m_b_psb = wx.Button(m_panel, label=u"PSB解析", style=wx.BU_EXACTFIT)
+        m_b_before = wx.Button(m_panel, label=u"資産解析結果加工事前解析", style=wx.BU_EXACTFIT)
+        m_b_online = wx.Button(m_panel, label=u"オンライン解析結果作成", style=wx.BU_EXACTFIT)
+        m_b_batch = wx.Button(m_panel, label=u"バッチ解析結果作成", style=wx.BU_EXACTFIT)
+
+        m_gb_sizer.Add(m_bb_back, pos=(0, 0), flag=wx.ALL)
+
+        m_gb_sizer.Add(m_b_db, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_ped_dam, pos=(2, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_psb, pos=(3, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_before, pos=(4, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_online, pos=(5, 0), flag=wx.EXPAND | wx.ALL, border=10)
+        m_gb_sizer.Add(m_b_batch, pos=(6, 0), flag=wx.EXPAND | wx.ALL, border=10)
+
+        m_gb_sizer.AddGrowableCol(0)
+        m_panel.SetSizerAndFit(m_gb_sizer)
+
+        self.SetSizer(m_bx_sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        m_b_db.Bind(wx.EVT_BUTTON, self.on_db_click)
+        m_b_ped_dam.Bind(wx.EVT_BUTTON, self.on_ped_dam_click)
+        m_b_psb.Bind(wx.EVT_BUTTON, self.on_psb_click)
+        m_b_before.Bind(wx.EVT_BUTTON, self.on_before_click)
+        m_b_online.Bind(wx.EVT_BUTTON, self.on_online_click)
+        m_b_batch.Bind(wx.EVT_BUTTON, self.on_batch_click)
+        m_bb_back.Bind(wx.EVT_BUTTON, self.on_close)
+        self.Bind(wx.EVT_CLOSE, _exit_sys)
+
+    def __del__(self):
+        pass
+
+    def on_db_click(self, event):
+        event.Skip()
+
+    def on_ped_dam_click(self, event):
+        event.Skip()
+
+    def on_psb_click(self, event):
+        event.Skip()
+
+    def on_before_click(self, event):
+        event.Skip()
+
+    def on_online_click(self, event):
+        event.Skip()
+
+    def on_batch_click(self, event):
+        event.Skip()
+
+    def on_close(self, event):
+        event.Skip()

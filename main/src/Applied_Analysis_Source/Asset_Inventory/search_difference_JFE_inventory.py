@@ -1,0 +1,590 @@
+#!/usr/bin/env python
+# -*- coding: cp932 -*-
+from hashlib import new
+import sys
+import os
+import pyodbc
+import pandas as pd
+import datetime
+
+from collections import deque
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from Common_analysis import *
+
+dt_now = str(datetime.date.today())
+
+
+
+# groups_list = ["Gr1(Œ`|EŠî”ÕE‚»‚Ì‘¼)","Gr1(Œ`|)","Gr1(Šî”Õ)","Gr1(‚»‚Ì‘¼)","Gr2","Gr3","Gr4","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„)","Gr5(“d¥)","Gr5(o‰×)","Gr6","Gr7"]
+
+same_modules = ["ƒRƒCƒ‹","ƒXƒ‰ƒu","Œ`|","Œv‰æ","Ş","”M‰„","”Md"]
+same_modules_group = ["Gr6","Gr6","Gr1","Gr6","Gr3","Gr6","Gr6"]
+# len_groups = len(groups_list)
+all_starting_asset_header = ["TEST_ID","Às‡˜","ÀsJOB","•â‘«","o—ÍƒtƒHƒ‹ƒ_"]
+
+
+groups_key_list = ["Gr1(Œ`|EŠî”ÕE‚»‚Ì‘¼)","Gr2","Gr3","Gr4","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„E“d¥Eo‰×)","Gr5(—â‰„E“d¥Eo‰×)",\
+                    "Gr6(ŠÇ—ŒnE‘€‹ÆŒn)","Gr6(ŠÇ—ŒnE‘€‹ÆŒn)",\
+                    "Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)","Gr7(»|ŒnE–_üŒnEğ|o‰×Œn)"]
+groups_info_list = ["Gr1","Gr2","Gr3","Gr4","Gr5(—â‰„)","Gr5(“d¥)","Gr5(o‰×)",\
+                    "Gr6(ŠÇ—Œn)","Gr6(‘€‹ÆŒn)","Gr7(»|ŒnEŠÇ—Œn)","Gr7(»|ŒnE‘€‹ÆŒn)","Gr7(–_üŒnEŠÇ—Œn)","Gr7(–_üŒnE‘€‹ÆŒn)","Gr7(ğ|o‰×ŒnE‘€‹ÆŒn)"
+                    ]
+
+
+comparizon_header = ["KEY2","“o˜^Ò—p‘YID","‘Y•ª—Ş(ACN)","‘Y—v”Û(‡¬Œ‹‰Ê)","‘Y—˜—pƒVƒXƒeƒ€","“ú–{Œê–¼Ì"]
+# group_all_use = ["›"]*len_groups
+# group_all_empty = [""]*len_groups
+
+
+asset_id_index = 1 ### “o˜^Ò—p‘YID ‚Ì index
+reasons_index = 6 ### ·•ª‚Ì——R‚ğ‹LÚ‚·‚éindex
+
+name_dic = {}
+rev_name_dic = {}
+relation_graph = []
+relation_group_info = {}
+relation_list = {}
+visited_id = []
+
+
+
+def write_excel_multi_sheet(filename,dfs,sheet_names,path,output_headers):
+    
+    Sheet_lim = 10**6
+    writer = pd.ExcelWriter(path+"/"+filename,engine='xlsxwriter')
+    writer.book.use_zip64()
+    sheet_name_list = []
+    
+    df_list = []
+    output_header_list = []
+    for df,header,sheet_name in zip(dfs,output_headers,sheet_names):
+        M = len(df)
+        for i in range(M//Sheet_lim+1):
+            df_list.append(df[i*Sheet_lim:min(M,(i+1)*Sheet_lim)])
+            output_header_list.append(header)
+            if i == 0:
+                sheet_name_list.append(sheet_name)
+            else:
+                sheet_name_list.append(sheet_name +"_" + str(i+1))
+            
+    for list,sheet_name,header in zip(df_list,sheet_name_list,output_header_list):
+        df = pd.DataFrame(list,columns=header)
+        df.to_excel(writer, sheet_name=sheet_name,index=False)
+        
+    writer._save()
+    writer.close()
+    
+    
+def check_module_name(name):
+    for module in same_modules:
+        if module in name:
+            return name[:name.find(module)]
+    
+    return name        
+
+def make_relations_group(base_path,gr_info):
+    
+    search_path = os.path.join(base_path)
+    folder_files = glob_files(search_path)
+    
+    for file_path in folder_files:
+        if "ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ" not in file_path or gr_info not in file_path:
+            continue
+        relations_group_df = pd.read_excel(file_path,sheet_name="ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ")
+        relations_group_df.fillna("",inplace=True)
+        relations_group_df = relations_group_df[relations_group_df["b’è–³ŒøFLG"] != "›"]
+        
+        return relations_group_df
+    
+    print("Error, there is no file of relations on {} in {}".format(gr_info,base_path))
+    return pd.DataFrame([])
+
+    
+def make_relation_merge_set(base_path):
+    
+    base_files = glob_files(base_path)
+    relation_merge_set = set()
+    for file in base_files:
+        if "‘YŠÖ˜A«’²¸Œ‹‰Êƒ}[ƒW”Å" not in file:
+            continue
+        df_relation_merge = pd.read_excel(file,sheet_name=None)  
+        df_sheet_list = df_relation_merge.keys()
+        for sheetname in df_sheet_list:
+            if "‘YŠÖ˜A«’²¸Œ‹‰Ê" not in sheetname:
+                continue
+            df = df_relation_merge[sheetname]
+            df.fillna("",inplace=True)
+            for source_from,relation_type,source_to in zip(df["ŒÄoŒ³‘Yiƒƒ“ƒo‚Ì‚İj"],df["ŒÄ‚Ño‚µ•û–@"],df["ŒÄ‚Ño‚µæ‘Y"]):
+                relation_merge_set.add((source_from,relation_type,source_to))
+            
+    for file in base_files:
+        if "‹N“_‘Yˆê——" not in file:
+            continue
+        df = pd.read_excel(file,sheet_name="‹N“_‘YŠÖ˜A«",header=1)  
+        df.fillna("",inplace=True)
+        for source_from,relation_type,source_to in zip(df["ŒÄoŒ³‘Yiƒƒ“ƒo‚Ì‚İj"],df["ŒÄo•û–@"],df["ŒÄoæ‘Y"]):
+            relation_merge_set.add((source_from,relation_type,source_to))
+       
+    if relation_merge_set:
+        return relation_merge_set
+
+    print("Error, there is no file of merged relations in {}".format(base_path))
+    return pd.DataFrame([])
+
+
+def make_starting_asset(new_path,gr_info):
+
+    search_path = os.path.join(new_path)
+    
+    folder_files = glob_files(search_path)
+    
+    for file_path in folder_files:
+        if "‹N“_î•ñ" not in file_path or gr_info not in file_path:
+            continue
+        
+        df_received_asset = pd.read_excel(file_path,sheet_name="TEST_À{’PˆÊ")
+        starting_asset = set([asset for asset in df_received_asset["ÀsJOB"]])
+        return starting_asset
+
+    print("Error, there is no info of starting asset of {} in {}.".format(gr_info,new_path))
+    return set()
+   
+  
+    
+def make_search_graph(df):
+    
+    
+    asset_set = set() ### ŒÄoŒ³ or ŒÄoæ ‚Ì‘Yˆê——‚ğd•¡‚ğœ‚¢‚Äì¬‚·‚é
+
+    relation_set = set() ### ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ‚©‚çŠÖ˜A«‚Ìˆê——‚ğd•¡‚ğœ‚¢‚Äæ“¾‚·‚é
+
+    for fr,relation_type,to in zip(df["ŒÄoŒ³‘Y"],df["ŒÄo•û–@"],df["ŒÄoæ‘Y"]):
+        fr_true = check_module_name(fr)
+        asset_set.add(fr_true)
+        
+        asset_set.add(to)
+        relation_set.add((fr,relation_type,to))
+      
+
+    asset_set = sorted(asset_set)
+    relation_list = sorted(relation_set)
+
+    ### ƒOƒ‰ƒt‚ğì¬‚·‚éÛ‚É DXDAIKOU ‚Ì‚æ‚¤‚È–¼‘O‚ğŒ³‚É‚·‚é‚æ‚è DXDAIKOU = 1, JXDAIKOU = 2 ‚Ì‚æ‚¤‚È‘Î‰•\‚ğì‚Á‚Ä ”š‚Åˆµ‚¦‚é‚æ‚¤‚É‚µ‚½•û‚ª‚‘¬‚É“®ì‚·‚é‚½‚ß •ÏŠ·•\‚Æ‹t•ÏŠ·•\‚ğì¬‚·‚é
+
+    ### •ÏŠ·•\ name_dic["DXDAIKOU"] = 1 ‚Ì‚æ‚¤‚É –¼‘O‚©‚ç”š‚ªæ“¾‚Å‚«‚é
+    name_dic = {s:i for i,s in enumerate(asset_set)} 
+
+    ### ‹t•ÏŠ·•\ rev_name_dic[1] = "DXDAIKOU" ‚Ì‚æ‚¤‚É ”š‚©‚ç–¼‘O‚ªæ“¾‚Å‚«‚é o—Í‚ÌÛ‚Í–¼‘O‚É–ß‚·‚Ì‚Å‚»‚±‚Åg‚¤
+    rev_name_dic = {i:s for i,s in enumerate(asset_set)}
+
+    ### ƒOƒ‰ƒt‚ÉŒÄoŒ³‘Y‚©‚çŒÄoæ‘Y‚ÉŒü‚©‚¤•Ó‚Æ‚µ‚ÄŠÖ˜A«‚Ìî•ñ‚ğ’Ç‰Á‚·‚é
+    ### —á‚¦‚Î ŠÖ˜A«‚É DXDAIKOU CALL JXDAIKOU ‚ª‚ ‚Á‚½‚Æ‚«‚Í
+    ### relation_graph[1] ‚ÌƒŠƒXƒg‚É‚Í JXDAIKOU‚Ì”š 2 ‚ª“ü‚Á‚Ä relation_graph[1] = [(2,xxx),(y,zzz)] ‚İ‚½‚¢‚É‚È‚Á‚Ä‚¢‚é 
+    n = len(asset_set)
+    relation_graph = [[] for i in range(n)]
+    for i,(fr,_,to) in enumerate(relation_list):
+        fr_true = check_module_name(fr)
+        find = name_dic[fr_true]
+        tind = name_dic[to]
+        relation_graph[find].append((tind,i))
+        
+    return relation_graph,relation_list,relation_set,name_dic,rev_name_dic,n
+
+
+def search_path_target_asset(starting_asset_list,target_set,relation_graph,relation_list,name_dic,rev_name_dic,n):
+    
+    ### ƒeƒXƒgÀ{’PˆÊ‚©‚ç‡”Ô‚ÉŠÖ˜A‘Y‚ğì¬‚·‚é
+    ### ‚â‚è•û‚ÍƒOƒ‰ƒt‚É‘Î‚·‚é •—Dæ’Tõ(BFS = Bred First Search) Šî–{“I‚ÍƒAƒ‹ƒSƒŠƒYƒ€‚È‚Ì‚Å•K—v‚ª‚ ‚ê‚ÎŒŸõ‚µ‚Ä‚İ‚é‚Æ—Ç‚¢‚Å‚·B
+    
+    visited_id = [-1]*n
+    path_par_id = [-1]*n
+    target_path_dic = {}
+    for i,source in enumerate(starting_asset_list):
+        ### source = ‹N“_‘Y‚ª‘YŠÖ˜A«î•ñ‚ÌŒÄoŒ³AŒÄoæ‚É‚¢‚È‚¢ê‡‚Í •ÏŠ·•\‚Å name_dic[source] ‚ÅƒAƒNƒZƒX‚·‚é‚ÆƒGƒ‰[‚É‚È‚é‚½‚ß (”z—ñŠOQÆ‚Ì‚æ‚¤‚È‚±‚Æ)AÅ‰‚Éˆ—‚·‚é
+        
+        if source not in name_dic:
+            continue
+        sind = name_dic[source]
+        q = deque([sind])
+        visited_id[sind] = i
+        path_par_id[sind] = -1
+        while q:
+            now = q.popleft()
+        
+            for nex,nind in relation_graph[now]:
+                
+                if visited_id[nex] == i:
+                    continue
+                visited_id[nex] = i
+                path_par_id[nex] = [now,nind]
+              
+                nname = rev_name_dic[nex]
+                q.append(nex)
+                
+                if nname not in target_set:
+                    continue
+                
+                target_set.remove(nname)
+                
+                target_path = []
+                
+                pos = nex
+                while pos != sind:
+                    npos,nind = path_par_id[pos]
+                    target_path.append(relation_list[nind][:3])
+                    pos = npos
+                target_path = reversed(target_path)
+                target_path_dic[nname] = target_path
+        
+
+    return target_path_dic
+
+
+   
+def make_exclude_set(base_path,gr_info):
+    base_files = glob_files(base_path)
+    for file in base_files:
+        if "ó—Ì‘Yˆê——ì¬ˆ—_“ü—Í" not in file:
+            continue
+        
+        df_exclude_all = pd.read_excel(file,sheet_name=None)  
+        df_sheet_list = df_exclude_all.keys()
+        
+        exclude_all = set(df_exclude_all["‰^—pŒnJCL_Š®‘SœŠO"]["œŠO‘Y–¼"].values.tolist())
+        exclude_to_source = set(df_exclude_all["œŠO‘Y_Gr‹¤’Ê"]["œŠO‘Y–¼"].values.tolist())
+        
+        sheet_name = "œŠO‘Y_" + gr_info
+        if sheet_name in df_sheet_list:
+            exclude_group = set(df_exclude_all[sheet_name]["œŠO‘Y–¼"].values.tolist())
+        else:
+            exclude_group = set()
+            
+        return exclude_all|exclude_to_source|exclude_group
+    
+    return set()
+
+ 
+def update_from_revival_asset(additions_asset,deletions_asset,new_revival_asset_list,old_revival_asset_list):
+    
+    new_revival_asset_set = set([revival_asset for revival_asset in new_revival_asset_list["“o˜^Ò—p‘YID"]])
+    old_revival_asset_set = set([revival_asset for revival_asset in old_revival_asset_list["“o˜^Ò—p‘YID"]])
+
+    additions_revival_asset = set()
+    deletions_revival_asset = set()
+    for asset in new_revival_asset_set:
+        if asset not in old_revival_asset_set:
+            additions_revival_asset.add(asset)
+            
+    for asset in old_revival_asset_set:
+        if asset not in new_revival_asset_set:
+            deletions_revival_asset.add(asset)
+            
+            
+    for i in range(len(additions_asset)):
+        if additions_asset[i][reasons_index] != "":
+            continue
+        if additions_asset[i][asset_id_index] in additions_revival_asset:
+            additions_asset[i][reasons_index] = "•œŠˆ‘Y‚Ì’Ç‰Á"
+            
+    for i in range(len(deletions_asset)):
+        if deletions_asset[i][reasons_index] != "":
+            continue
+        if deletions_asset[i][asset_id_index] in deletions_revival_asset:
+            deletions_asset[i][reasons_index] = "•œŠˆ‘Y‚Ìíœ"
+    
+    return additions_asset,deletions_asset
+
+
+def update_from_exclude_asset(additions_asset,deletions_asset,new_exclude_set,old_exclude_set):
+    
+    for i in range(len(additions_asset)):
+        if additions_asset[i][reasons_index] != "":
+            continue
+        asset_id = additions_asset[i][asset_id_index]
+        if asset_id in old_exclude_set and asset_id not in new_exclude_set:
+            additions_asset[i][reasons_index] = "œŠO‘Y‚Ìíœ"
+            
+    for i in range(len(deletions_asset)):
+        if deletions_asset[i][reasons_index] != "":
+            continue
+        asset_id = deletions_asset[i][asset_id_index]
+        if asset_id in new_exclude_set and asset_id not in old_exclude_set:
+            deletions_asset[i][reasons_index] = "œŠO‘Y‚Ì’Ç‰Á"
+    
+    return additions_asset,deletions_asset
+
+
+def update_from_starting_asset(additions_asset,deletions_asset,new_starting_asset,old_starting_asset,new_additions_screen_asset,old_additions_screen_asset):
+    
+    new_all_asset = new_starting_asset | new_additions_screen_asset
+    old_all_asset = old_starting_asset | old_additions_screen_asset
+    for i in range(len(additions_asset)):
+        if additions_asset[i][reasons_index] != "":
+            continue
+        asset_id = additions_asset[i][asset_id_index]
+        if asset_id in new_starting_asset and asset_id not in old_all_asset:
+            additions_asset[i][reasons_index] = "‹N“_‘Y‚Ì’Ç‰Á"
+            
+        elif asset_id in new_additions_screen_asset and asset_id not in old_all_asset:
+            additions_asset[i][reasons_index] = "‹N“_‘Y‚Ì’Ç‰Á_’Ç‰ÁˆÚs‘ÎÛ‰æ–Ê‘Y"
+            
+    for i in range(len(deletions_asset)):
+        if deletions_asset[i][reasons_index] != "":
+            continue
+        asset_id = deletions_asset[i][asset_id_index]
+        if asset_id in old_starting_asset and asset_id not in new_all_asset:
+            deletions_asset[i][reasons_index] = "‹N“_‘Y‚Ìíœ"
+            
+        elif asset_id in old_additions_screen_asset and asset_id not in new_all_asset:
+            deletions_asset[i][reasons_index] = "‹N“_‘Y‚Ìíœ_’Ç‰ÁˆÚs‘ÎÛ‰æ–Ê‘Y"
+    
+    return additions_asset,deletions_asset
+
+def update_from_related_asset(additions_asset,deletions_asset,new_starting_asset,old_starting_asset,new_additions_screen_asset,old_additions_screen_asset,new_relations_group_df,old_relations_group_df,new_relation_merge_set,old_relation_merge_set,new_exclude_set,old_exclude_set):
+    
+    ### ŒÚ‹q•Ê_‘YŠÖ˜A«î•ñ‚©‚çƒOƒ‰ƒt‚ğì¬‚·‚é
+    new_relation_graph,new_relation_list,new_relation_set,new_name_dic,new_rev_name_dic,new_n = make_search_graph(new_relations_group_df)
+    old_relation_graph,old_relation_list,old_relation_set,old_name_dic,old_rev_name_dic,old_n = make_search_graph(old_relations_group_df)
+    
+    new_starting_asset |= new_additions_screen_asset
+    old_starting_asset |= old_additions_screen_asset
+    
+    additions_target = set()
+    for i in range(len(additions_asset)):
+        if additions_asset[i][reasons_index] != "":
+            continue
+        additions_target.add(additions_asset[i][asset_id_index])
+        
+    
+    additions_path_dic = search_path_target_asset(new_starting_asset,additions_target,new_relation_graph,new_relation_list,new_name_dic,new_rev_name_dic,new_n)
+    
+    for i in range(len(additions_asset)):
+        if additions_asset[i][reasons_index] != "":
+            continue
+        asset = additions_asset[i][asset_id_index]
+        
+        if asset not in additions_path_dic:
+            additions_asset[i][reasons_index] = "Œ´ˆö•s–¾"
+            continue
+        asset_relation_path = additions_path_dic[asset]
+
+        for num,(source_from,relation_type,source_to) in enumerate(asset_relation_path):
+            
+            if num == 0 and source_from not in old_starting_asset:
+                additions_asset[i][reasons_index] = "‹N“_‘Y‚Ì’Ç‰Á: " + source_from
+                break
+            relation_tuple = (source_from,relation_type,source_to)
+            if relation_tuple in old_relation_set:
+                continue
+            
+            if source_from in old_exclude_set:
+                additions_asset[i][reasons_index] = "œŠO‘Y‚Ìíœ‚É‚æ‚éŠÖ˜A«‚Ì’Ç‰Á"+source_from+": " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break
+            
+            if source_to in old_exclude_set: 
+                additions_asset[i][reasons_index] = "œŠO‘Y‚Ìíœ‚É‚æ‚éŠÖ˜A«‚Ì’Ç‰Á"+source_to+": " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break
+            
+            if relation_tuple not in old_relation_merge_set:
+                additions_asset[i][reasons_index] = "ŠÖ˜A«‚Ì’Ç‰Á: " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break 
+            else:
+                additions_asset[i][reasons_index] = "ƒƒ“ƒoˆê——‚ÌXV‚É‚æ‚éŠÖ˜A«Gr‚Ì•ÏX: " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break
+        if additions_asset[i][reasons_index] == "":
+            additions_asset[i][reasons_index] = "Œ´ˆö•s–¾"
+    
+    
+    deletions_target = set()
+    for i in range(len(deletions_asset)):
+        if deletions_asset[i][reasons_index] != "":
+            continue
+        deletions_target.add(deletions_asset[i][asset_id_index])
+        
+    deletions_path_dic = search_path_target_asset(old_starting_asset,deletions_target,old_relation_graph,old_relation_list,old_name_dic,old_rev_name_dic,old_n)
+    
+    for i in range(len(deletions_asset)):
+        if deletions_asset[i][reasons_index] != "":
+            continue
+        asset = deletions_asset[i][asset_id_index]
+        
+        if asset not in deletions_path_dic:
+            deletions_asset[i][reasons_index] = "Œ´ˆö•s–¾"
+            continue
+        
+        asset_relation_path = deletions_path_dic[asset]
+        
+        
+        for num,(source_from,relation_type,source_to) in enumerate(asset_relation_path):
+            
+            if num == 0 and source_from not in new_starting_asset:
+                deletions_asset[i][reasons_index] = "‹N“_‘Y‚Ìíœ: " + source_from
+                break
+            
+            relation_tuple = (source_from,relation_type,source_to)
+            if relation_tuple in new_relation_set:
+                continue
+            
+            if source_from in new_exclude_set:
+                deletions_asset[i][reasons_index] = "œŠO‘Y‚Ì’Ç‰Á‚É‚æ‚éŠÖ˜A«‚Ìíœ"+source_from+": " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break
+            
+            if source_to in new_exclude_set: 
+                deletions_asset[i][reasons_index] = "œŠO‘Y‚Ì’Ç‰Á‚É‚æ‚éŠÖ˜A«‚Ìíœ"+source_to+": " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break
+            
+            if relation_tuple not in new_relation_merge_set:
+                deletions_asset[i][reasons_index] = "ŠÖ˜A«‚Ìíœ: " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break 
+            else:
+                deletions_asset[i][reasons_index] = "ƒƒ“ƒoˆê——‚ÌXV‚É‚æ‚éŠÖ˜A«Gr‚Ì•ÏX: " + source_from + "¨" + source_to + " ŠÖ˜A«=" + relation_type
+                break
+        if deletions_asset[i][reasons_index] == "":
+            deletions_asset[i][reasons_index] = "Œ´ˆö•s–¾"
+    
+    return additions_asset,deletions_asset
+def comparizon_asset_inventory_group(new_path,old_path,gr_key,gr_info,title,new_relation_merge_set,old_relation_merge_set):
+    
+    new_files = glob_files(new_path)
+    old_files = glob_files(old_path)
+    
+    new_asset_inventory_df = []
+    old_asset_inventory_df = []
+    for new_file in new_files:
+        if "’I‰µ—p‘Yˆê——" not in new_file or gr_info not in new_file:
+            continue
+        
+        new_asset_inventory_df = pd.read_excel(new_file,sheet_name=None)
+        
+    for old_file in old_files:
+        if "’I‰µ—p‘Yˆê——" not in old_file or gr_info not in old_file:
+            continue
+        
+        old_asset_inventory_df = pd.read_excel(old_file,sheet_name=None)
+    
+    
+    if old_asset_inventory_df == []:
+        print("’I‰µ—p‘Yˆê—— {} ‚É‚ÍŒÃ‚¢î•ñ‚ª {} ‚É‘¶İ‚µ‚È‚¢‚½‚ßA”äŠr‰ğÍ‚ğƒXƒLƒbƒv‚µ‚Ü‚·B".format(gr_info,old_path))
+        
+        return 1
+    
+    
+    new_asset_inventory_main = new_asset_inventory_df["’I‰µ—p‘Yˆê——"]
+    old_asset_inventory_main = old_asset_inventory_df["’I‰µ—p‘Yˆê——"]
+    
+    new_asset_inventory_main.fillna("",inplace=True)
+    old_asset_inventory_main.fillna("",inplace=True)
+    
+    new_asset_inventory_main_matching_dic = {new_asset_inventory_main.iloc[i]["KEY2"]:new_asset_inventory_main.iloc[i] for i in range(len(new_asset_inventory_main))}
+    old_asset_inventory_main_all_set = set([old_asset_inventory_main.iloc[i]["KEY2"] for i in range(len(old_asset_inventory_main))])
+    new_asset_inventory_used_asset_list = new_asset_inventory_main[new_asset_inventory_main["—˜—p”»’è"] != ""]
+    old_asset_inventory_used_asset_list = old_asset_inventory_main[old_asset_inventory_main["—˜—p”»’è"] != ""]
+    new_asset_inventory_used_asset_set = set([key for key in new_asset_inventory_used_asset_list["KEY2"]])
+    old_asset_inventory_used_asset_set = set([key for key in old_asset_inventory_used_asset_list["KEY2"]])
+    
+    additions_asset = []
+    deletions_asset = []
+    
+    for asset in new_asset_inventory_used_asset_set:
+        if asset not in old_asset_inventory_used_asset_set:
+            if asset not in old_asset_inventory_main_all_set:
+                data = new_asset_inventory_main_matching_dic[asset]
+                values = [data[key] for key in comparizon_header]
+                values.extend(["V‹Kó—Ì‘Y",""])
+                additions_asset.append(values)
+            else:
+                
+                data = new_asset_inventory_main_matching_dic[asset]
+                values = [data[key] for key in comparizon_header]
+                values.extend(["",""])
+                additions_asset.append(values)
+            
+    for asset in old_asset_inventory_used_asset_set:
+        if asset not in new_asset_inventory_used_asset_set:
+            if asset in new_asset_inventory_main_matching_dic:
+                data = new_asset_inventory_main_matching_dic[asset]
+                values = [data[key] for key in comparizon_header]
+                values.extend(["",""])
+            else:
+                values = [asset,"’I‰µ—p‘Yˆê——ÅV”Å‚Éƒf[ƒ^‚È‚µ","","","",""]
+                values.extend(["",""])
+            deletions_asset.append(values)
+    
+    
+    
+    new_revival_asset_list = new_asset_inventory_main[new_asset_inventory_main["•œŠˆ‘Y"] == "›"]
+    old_revival_asset_list = old_asset_inventory_main[old_asset_inventory_main["•œŠˆ‘Y"] == "›"]
+    
+    additions_asset,deletions_asset = update_from_revival_asset(additions_asset,deletions_asset,new_revival_asset_list,old_revival_asset_list)
+    
+    new_exclude_set = make_exclude_set(new_path,gr_info)
+    old_exclude_set = make_exclude_set(old_path,gr_info)
+    additions_asset,deletions_asset = update_from_exclude_asset(additions_asset,deletions_asset,new_exclude_set,old_exclude_set)
+    
+    
+    ### Gr‚Å‚Ì‹N“_ˆê——‚ğæ“¾
+    new_starting_asset = make_starting_asset(new_path,gr_info)
+    old_starting_asset = make_starting_asset(old_path,gr_info)
+    
+    new_additions_screen_asset = new_asset_inventory_df["’Ç‰ÁˆÚs‘ÎÛ‰æ–Ê"]
+    old_additions_screen_asset = old_asset_inventory_df["’Ç‰ÁˆÚs‘ÎÛ‰æ–Ê"]
+    
+    new_additions_screen_asset = set([asset_id for asset_id in new_additions_screen_asset["“o˜^Ò—p‘YID"]])
+    old_additions_screen_asset = set([asset_id for asset_id in old_additions_screen_asset["“o˜^Ò—p‘YID"]])
+    
+    additions_asset,deletions_asset = update_from_starting_asset(additions_asset,deletions_asset,new_starting_asset,old_starting_asset,new_additions_screen_asset,old_additions_screen_asset)
+    
+    
+    
+    ### ŠÖ˜A«î•ñ‚ğæ“¾‚·‚é
+    new_relations_group_df = make_relations_group(new_path,gr_info)
+    old_relations_group_df = make_relations_group(old_path,gr_info)
+    
+    additions_asset,deletions_asset = update_from_related_asset(additions_asset,deletions_asset,new_starting_asset,old_starting_asset,new_additions_screen_asset,old_additions_screen_asset,new_relations_group_df,old_relations_group_df,new_relation_merge_set,old_relation_merge_set,new_exclude_set,old_exclude_set)
+    
+      
+    
+    gr_name = gr_info
+    if "Gr5" in gr_name:
+        gr_name = "Gr5"
+    if "Gr6" in gr_name:
+        gr_name = "Gr6"
+    if "Gr7" in gr_name:
+        gr_name = "Gr7"
+        
+    file_name = "’I‰µ‘Œ¸‘Yˆê——_"+gr_info+"_"+dt_now+".xlsx"
+    out_title = os.path.join(title,gr_name)
+    
+    comp_header = comparizon_header + ["ˆÚs”»’è•Ï“®——R","ˆÚs”»’è•Ï“®——RÚ×"]
+    if os.path.isdir(out_title) == False:
+        os.makedirs(out_title)
+        
+    write_excel_multi_sheet(file_name,[additions_asset,deletions_asset],["‘‰Á‘Yˆê——","Œ¸­‘Yˆê——",],out_title,[comp_header,comp_header])
+ 
+def main(new_path,old_path,title):
+
+    if os.path.isdir(title) == False:
+        os.makedirs(title)        
+    
+    
+    new_relation_merge_set = make_relation_merge_set(new_path)
+    
+    old_relation_merge_set = make_relation_merge_set(old_path)
+    
+    new_path_files = glob_files(new_path)
+    
+    for file_path in new_path_files:
+        if "’I‰µ—p‘Yˆê——" not in file_path:
+            continue
+        
+        gr_info = file_path.split("_")[1]
+        gr_key = groups_key_list[groups_info_list.index(gr_info)]
+        print("{}‚Ì’I‰µ‘Œ¸‘Yˆê——‚Ìì¬‚ğŠJn‚µ‚Ü‚·B".format(gr_info))
+        comparizon_asset_inventory_group(new_path,old_path,gr_key,gr_info,title,new_relation_merge_set,old_relation_merge_set)
+          
+if __name__ == "__main__":
+
+    main(sys.argv[1],sys.argv[2],sys.argv[3])
+    
+    ### ˆø”1 DBPath ˆø”2 o—ÍƒtƒHƒ‹ƒ_ 

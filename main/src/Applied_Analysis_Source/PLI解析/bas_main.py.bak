@@ -1,0 +1,2496 @@
+import os
+import sys
+import bas_key
+import re
+
+
+def fn_right(text, num_chars):
+    return text[-num_chars:]
+
+
+def fn_left(text, num_chars):
+    return text[:num_chars]
+
+
+def fn_mid(s, start, length=0):
+    if length == 0:
+        length = len(s)
+    # 使用字符串切片操作获取需要的子字符串
+    return s[start - 1:start + length - 1]
+
+
+def fn_trim(s):
+    # 使用strip()函数移除字符串两端的空格
+    return s.strip()
+
+
+def fn_InStr(s, sub, start=0):
+    position = s.find(str(sub), start)
+    return position + 1 if position >= 0 else 0
+
+
+stop_flag = False
+InFolderName_iter = iter("")
+InFile_iter = iter("")
+strKeywordFileName_key_word = ""
+strWordFileName_DivAfterKeyword = ""
+strWordFileName_ForbiddenWordLabel = ""
+low_value_replace = ""
+low_value_change = False
+
+###########################################################################################
+###########################################################################################
+
+result = []
+
+intLogFile = 0  # ログファイルのファイル番号
+strLiteralStart = []  # リテラル開始記号を保存する配列
+strLiteralType = []  # リテラル種類記号を保存する配列
+strForbiddenWordLabel = []  # ラベル含有禁止単語の配列
+strDivideAfter = []  # 後ろで区切るキーワード
+
+# 入力フォルダ・ファイル関連変数
+strInFolderName = ""  # 入力フォルダ名
+strInFileName = ""  # 入力ファイル名
+# intInFile = 0                            # 入力ファイルのファイル番号
+strInFileLine = ""  # 入力ファイルの１行
+intPhysicalLine = 0  # 物理行の行数
+intLogicalLine = 0  # 論理行の行数
+
+# 出力フォルダ・ファイル関連変数
+strOutFolderName = ""  # 出力フォルダ名
+strOutSourceFolderName = ""  # 出力フォルダ内で、ソースを出力するためのフォルダ名
+strOutFileName = ""  # 出力ファイル名
+intOutFile = 0  # 出力ファイルのファイル番号
+
+# 行単位の処理関連変数（COBOL・PL/I共通）
+strBuffer = ""  # 出力用バッファ
+intLiteralStartLength = 0  # リテラル開始記号の長さ（終了記号検索時の検索開始桁に使用）
+intLiteralFind = 0  # リテラル終端記号発見桁数
+intExecFind = 0  # EXEC終端記号発見桁数
+strFromFile = ""  # 作業文字列から取った比較用文字列
+strFromKeyword = ""  # キーワード配列から取った比較用文字列
+strNowLiteralType = ""  # 現在有効なリテラル区切り記号の種類（「# 」or「"」）
+
+# 行単位の処理関連変数（COBOLのみ）
+# intEqualFind = 0                      # 「==」終端記号発見桁数
+
+# 行単位の処理関連変数（PL/Iのみ）
+intLiteralForComCut = 0  # コメントをカットするために見る、リテラルの終端桁
+strNowLiteralTypeForComCut = ""  # コメントカットするために見る、現在のリテラル記号
+strBeforeComStart = ""  # 「/*」の直前までの文字列
+intLiteralStartForComCut = 0  # リテラル開始記号の発見桁
+intColon = 0  # コロン発見桁
+strBeforeColon = ""  # コロンの直前までの文字列（ラベル候補）
+intOverlapping = 0  # 括弧の重複度
+
+# フラグ類（COBOL・PL/I共通）
+flgLiteralContinue = False  # リテラル処理中か
+flgEXEC = False  # 直前の文字が「EXEC」であるか
+flgEXECSQL = False  # 「EXEC SQL」処理中か
+flgEXECCICS = False  # 「EXEC CICS」処理中か
+flgLiteral = False  # その行にリテラルの終端記号があったか
+flgEqual = False  # その行に「==」終端記号があったか
+flgMatching = False  # 比較文字列がキーワードと一致したか
+flgMainProcess = False  # 一行に対する主処理を行うか
+flgCtrlRecord = False  # その行が制御レコードか
+flgOutPut = False  # バッファの中身を出力するか
+flgLabel = False  # その行の先頭がラベルか
+
+# フラグ類（COBOLのみ）
+# flgEqualContinue = False                     # 「==」処理中か
+# flgComment = False                           # その行がコメントか
+# flgLiteralStart = False                      # 今の作業文字列の先頭がリテラル開始記号か
+
+# フラグ類（PL/Iのみ）
+flgBracketContinue = False  # 括弧処理中か
+flgNowComment = False  # 現在位置がコメントか
+flgCommentStartIsInLiteral = False  # 「/*」がリテラル内か
+flgDCLContinue = False  # DCLステートメント処理中か
+
+# キーワード関連
+strKeyWord_A = ""  # キーワードの情報を保存する文字列(Aで始まるもの)
+strKeyWord_B = ""  # キーワードの情報を保存する文字列(Bで始まるもの)
+strKeyWord_C = ""  # キーワードの情報を保存する文字列(Cで始まるもの)
+strKeyWord_D = ""  # キーワードの情報を保存する文字列(Dで始まるもの)
+strKeyWord_E = ""  # キーワードの情報を保存する文字列(Eで始まるもの)
+strKeyWord_F = ""  # キーワードの情報を保存する文字列(Fで始まるもの)
+strKeyWord_G = ""  # キーワードの情報を保存する文字列(Gで始まるもの)
+strKeyWord_H = ""  # キーワードの情報を保存する文字列(Hで始まるもの)
+strKeyWord_I = ""  # キーワードの情報を保存する文字列(Iで始まるもの)
+strKeyWord_J = ""  # キーワードの情報を保存する文字列(Jで始まるもの)
+strKeyWord_K = ""  # キーワードの情報を保存する文字列(Kで始まるもの)
+strKeyWord_L = ""  # キーワードの情報を保存する文字列(Lで始まるもの)
+strKeyWord_M = ""  # キーワードの情報を保存する文字列(Mで始まるもの)
+strKeyWord_N = ""  # キーワードの情報を保存する文字列(Nで始まるもの)
+strKeyWord_O = ""  # キーワードの情報を保存する文字列(Oで始まるもの)
+strKeyWord_P = ""  # キーワードの情報を保存する文字列(Pで始まるもの)
+strKeyWord_Q = ""  # キーワードの情報を保存する文字列(Qで始まるもの)
+strKeyWord_R = ""  # キーワードの情報を保存する文字列(Rで始まるもの)
+strKeyWord_S = ""  # キーワードの情報を保存する文字列(Sで始まるもの)
+strKeyWord_T = ""  # キーワードの情報を保存する文字列(Tで始まるもの)
+strKeyWord_U = ""  # キーワードの情報を保存する文字列(Uで始まるもの)
+strKeyWord_V = ""  # キーワードの情報を保存する文字列(Vで始まるもの)
+strKeyWord_W = ""  # キーワードの情報を保存する文字列(Wで始まるもの)
+strKeyWord_X = ""  # キーワードの情報を保存する文字列(Xで始まるもの)
+strKeyWord_Y = ""  # キーワードの情報を保存する文字列(Yで始まるもの)
+strKeyWord_Z = ""  # キーワードの情報を保存する文字列(Zで始まるもの)
+strKeyWord_Numeric = ""  # キーワードの情報を保存する文字列(数字で始まるもの)
+strKeyWord_OTHER = ""  # キーワードの情報を保存する文字列(その他で始まるもの)
+
+
+# *******************************************************************************
+# プロシージャ名称：     プログラムソースの論理行化
+#
+# 処理概要：プログラムソース（テキストファイル）を読み込み、論理行化する
+#
+# 処理対象：プログラムソース
+#
+# 出力　　：論理行
+#
+# 出力形式：テキストファイル
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def psALL():
+    process_count = 1
+    # １　初期処理
+    ps_1_Pre()
+
+    while strInFileName != "":
+        # ２　主処理
+        ps_2_Main()
+        print(f"\rPreparing: {process_count}, name = {strInFileName}", end="")
+        process_count = process_count + 1
+
+    # ３　終了処理
+    ps_3_After()
+
+
+# *******************************************************************************
+# プロシージャ名称：   １　初期処理
+#
+# 処理概要：①入力・出力フォルダ名取得
+#           ②ログファイルのオープン
+#           ③キーワード取得
+#           ④リテラル種類取得
+#           ⑤最初のファイル名取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_1_Pre():
+    # フォルダ名取得
+    ps_11_GetFolderName()
+
+    # ログファイルオープン
+    ps_12_OpenLogFile()
+
+    # キーワード取得
+    ps_13_GetKeyWord()
+
+    # リテラル種類取得
+    ps_14_GetLiteral()
+
+    # ラベル含有禁止文字列取得
+    ps_16_GetForbiddenWordLabel()
+
+    # 後ろで区切るキーワード取得
+    ps_17_GetDivAfterKeyword()
+
+    # 最初のファイル名取得
+    ps_15_GetFirstFileName()
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－１　入出力フォルダ名取得・論理化後ソース出力フォルダ作成
+#
+# 処理概要：入力・出力フォルダ名取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_11_GetFolderName():
+    # strTemp = ""  # フォルダ名検索用変数
+    # flgTemp = False  # 同フラグ
+    global strInFolderName
+    global strOutFolderName
+
+    # 入力フォルダ名の取得（最後に「\」がない場合のフォロー含む）
+    if fn_right(strInFolderName, 1) != "\\":
+        strInFolderName = strInFolderName + "\\"
+
+    # 出力フォルダ名の取得（最後に「\」がない場合のフォロー含む）
+    # if fn_right(strOutFolderName, 1) != "\\" :
+    #     strOutFolderName = strOutFolderName + "\\"
+
+    # 論理化後ソースを出力するフォルダが無ければ作成する
+    # strOutSourceFolderName = strOutFolderName + "論理化後ソース"
+
+    # 最初のフォルダ名を取得
+    # strTemp = Dir(strOutFolderName, vbDirectory)
+
+    # フォルダがなくなるまで繰り返し
+    # while strTemp != "":
+
+    #     # 「論理化後ソース」フォルダがあれば抜ける
+    #     if strTemp == "論理化後ソース" :
+    #         flgTemp = True
+    #         break
+
+    #     # 次のフォルダ名取得
+    #     strTemp = Dir
+
+    # # 「論理化後ソース」が無ければ作成
+    # if flgTemp == False :
+    #     MkDir (strOutSourceFolderName)
+
+    # 「\」マークを付与
+    # strOutSourceFolderName = strOutSourceFolderName + "\\"
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－２　ログファイルオープン
+#
+# 処理概要：ログファイルのオープン
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_12_OpenLogFile():
+    pass
+
+    # strLogFileName = ""                    # ログファイル名
+    # strDate = ""                           # 日付（ファイル名に使うため）
+    # strTime = ""                           # 時間（ファイル名に使うため）
+
+    # # 日付けをシステムから取得し、ファイル名に出来るよう整形
+    # if Len(Date) == 10 :
+    #     strDate = fn_left(Date, 4) + fn_mid(Date, 6, 2) + fn_mid(Date, 9)
+    # elif Len(Date) == 8 :
+    #     strDate = "20" + fn_left(Date, 2) + fn_mid(Date, 4, 2) + fn_mid(Date, 7)
+    # # 日付けをうまく取得できない場合は（DateUnknown）
+    # else:
+    #     strDate = "(DateUnknown)"
+
+    # # 時刻をシステムから取得し、ファイル名に出来るよう整形
+    # if Len(Time) == 8 :
+    #     strTime = fn_left(Time, 2) + fn_mid(Time, 4, 2) + fn_mid(Time, 7)
+    # elif Len(Time) == 7 :
+    #     strTime = "0" + fn_left(Time, 1) + fn_mid(Time, 3, 2) + fn_mid(Time, 6)
+
+    # # 時刻をうまく取得できない場合は（TimeUnknown）
+    # else:
+    #     strTime = "(TimeUnknown)"
+
+    # # ファイル名を作成
+    # strLogFileName = strOutFolderName + strDate + "_" + strTime + "_" + "Log.txt"
+
+    # # あいているファイル番号を取得
+    # intLogFile = FreeFile
+
+    # # ログファイルを開く
+    # Open strLogFileName For Output As #intLogFile
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－３　キーワード取得
+#
+# 処理概要：キーワードを取得する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_13_GetKeyWord():
+    # strKeywordFileName = ""  # キーワード情報ファイル名
+    # intFileNumber = 0  # ファイル番号
+    # strKeyWord = ""  # キーワード（一時保持用）
+    global strKeywordFileName_key_word
+
+    # セルからファイル名取得
+
+    # ファイル番号を取得（あいているファイル番号）
+    # intFileNumber = FreeFile
+
+    # ファイルのオープン
+    # Open strKeywordFileName For Input As #intFileNumber
+    for line in bas_key.fn_get_key_word():
+        # line = line.replace("\n", "")
+        # line = line.strip()
+        # if line != "":
+        ps_131_GetKeyWord_Judge(line)
+
+    # # ファイルの終わりまで繰り返し
+    # while EOF(intFileNumber) == False:
+
+    #     # 一行読み込み
+    #     Line Input #intFileNumber, strKeyWord
+
+    #     # その行が空行でなければキーワード配列に保存
+    #     if Trim(strKeyWord) != "" :
+
+    #         # キーワード保存用モジュール呼び出し
+    #         ps_131_GetKeyWord_Judge(strKeyWord)()
+
+    #     fn_trimo
+
+    # # ファイルのクローズ
+    # Close #intFileNumber
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－３－１　キーワードを変数に保存するための場合分け
+#
+# 処理概要：入力・出力フォルダ名取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_131_GetKeyWord_Judge(strKeyWord):
+    # intFirstWord = 0  # 最初の一文字の文字コード
+    # strFirstWord = ""  # 最初の一文字
+
+    global strKeyWord_A
+    global strKeyWord_B
+    global strKeyWord_C
+    global strKeyWord_D
+    global strKeyWord_E
+    global strKeyWord_F
+    global strKeyWord_G
+    global strKeyWord_H
+    global strKeyWord_I
+    global strKeyWord_J
+    global strKeyWord_K
+    global strKeyWord_L
+    global strKeyWord_M
+    global strKeyWord_N
+    global strKeyWord_O
+    global strKeyWord_P
+    global strKeyWord_Q
+    global strKeyWord_R
+    global strKeyWord_S
+    global strKeyWord_T
+    global strKeyWord_U
+    global strKeyWord_V
+    global strKeyWord_W
+    global strKeyWord_X
+    global strKeyWord_Y
+    global strKeyWord_Z
+    global strKeyWord_OTHER
+
+    # 頭文字を取得
+    strFirstWord = fn_left(strKeyWord, 1)
+
+    # 頭文字の文字コードを取得
+    intFirstWord = ord(strFirstWord)
+
+    # 「A」～「M」のとき
+    if (intFirstWord >= ord("A")) and (intFirstWord <= ord("Z")):
+
+        # 頭文字によってキーワードの格納用変数が異なる
+        if strFirstWord == "A":
+            strKeyWord_A = strKeyWord_A + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "B":
+            strKeyWord_B = strKeyWord_B + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "C":
+            strKeyWord_C = strKeyWord_C + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "D":
+            strKeyWord_D = strKeyWord_D + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "E":
+            strKeyWord_E = strKeyWord_E + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "F":
+            strKeyWord_F = strKeyWord_F + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "G":
+            strKeyWord_G = strKeyWord_G + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "H":
+            strKeyWord_H = strKeyWord_H + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "I":
+            strKeyWord_I = strKeyWord_I + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "J":
+            strKeyWord_J = strKeyWord_J + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "K":
+            strKeyWord_K = strKeyWord_K + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "L":
+            strKeyWord_L = strKeyWord_L + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "M":
+            strKeyWord_M = strKeyWord_M + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "N":
+            strKeyWord_N = strKeyWord_N + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "O":
+            strKeyWord_O = strKeyWord_O + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "P":
+            strKeyWord_P = strKeyWord_P + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "Q":
+            strKeyWord_Q = strKeyWord_Q + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "R":
+            strKeyWord_R = strKeyWord_R + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "S":
+            strKeyWord_S = strKeyWord_S + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "T":
+            strKeyWord_T = strKeyWord_T + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "U":
+            strKeyWord_U = strKeyWord_U + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "V":
+            strKeyWord_V = strKeyWord_V + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "W":
+            strKeyWord_W = strKeyWord_W + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "X":
+            strKeyWord_X = strKeyWord_X + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "Y":
+            strKeyWord_Y = strKeyWord_Y + ps_1311_GetKeyWord_Add(strKeyWord)
+        elif strFirstWord == "Z":
+            strKeyWord_Z = strKeyWord_Z + ps_1311_GetKeyWord_Add(strKeyWord)
+    else:
+        # それ以外（「%」など）はその他のキーワード格納用変数に格納
+        strKeyWord_OTHER = strKeyWord_OTHER + ps_1311_GetKeyWord_Add(strKeyWord)
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－３－１－１　キーワードを変数に保存
+#
+# 処理概要：入力・出力フォルダ名取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_1311_GetKeyWord_Add(strKeyWord):
+    # varLength = "Any"                    # キーワード長
+
+    # キーワード長を取得
+    varLength = len(strKeyWord)
+
+    # キーワード格納文字列は（キーワード長）（キーワード）（キーワード長）（キーワード）…
+    # の形の文字列にする
+
+    # キーワード長が１桁のとき
+    if len(str(varLength)) < 2:
+        # 頭にゼロを付与
+        varLength_str = "0" + str(varLength)
+        return varLength_str + strKeyWord
+
+    # キーワード長＋キーワードを現在のキーワード格納用変数に保存
+    return str(varLength) + strKeyWord
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－４　リテラル情報を取得
+#
+# 処理概要：リテラルの情報取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_14_GetLiteral():
+    # strLiteralStartFileName = ""               # リテラル開始記号の情報の入ったファイル名
+    # strLiteralTypeFileName = ""  # リテラル種類記号の情報の入ったファイル名
+    # intLiteralStartFile = 0                  # リテラル開始記号の情報の入ったファイル番号
+    # intLiteralTypeFile = 0                   # リテラル種類記号の情報の入ったファイル番号
+    # intNum = 0                               # 作業用添え字
+    # strTemp = ""                               # 記号一時保管用文字列
+
+    # strLiteralStart = []            # リテラル開始記号の配列を初期化
+    global strLiteralType, strLiteralTypeFileName_Literal  # リテラル記号の配列を初期化
+
+    # strLiteralStartFileName = Sheet1.Cells(8, 2).Value
+
+    # intLiteralStartFile = FreeFile
+    # Open strLiteralStartFileName For Input As #intLiteralStartFile
+
+    # intLiteralTypeFile = FreeFile
+    # Open strLiteralTypeFileName For Input As #intLiteralTypeFile
+    for line in bas_key.fn_get_literal():
+        # line = line.replace("\n", "")
+        # line = line.strip()
+        strLiteralType.append(line)
+
+    # intNum = 0          # 添え字を初期化する（ゼロ）
+    # strTemp = ""        # 読み込み用変数を初期化する（ゼロ）
+
+    # # リテラル記号の種類取得
+    # while EOF(intLiteralTypeFile) = False:
+
+    #     # 一行読み込み
+    #     Line Input #intLiteralTypeFile, strTemp
+
+    #     # 読みこんだ文字列が空でなければ
+    #     if strTemp != "" :
+
+    #         # 配列の最初の値が空でなければ、２個目以降なので、配列の要素を増やす
+    #         if strLiteralType(intNum) != "" :
+
+    #             # 添え字用変数増やす
+    #             intNum = intNum + 1
+
+    #             # 配列再定義
+    #             ReDim Preserve strLiteralType(intNum)
+
+    #         # 配列の最新の要素にキーワード代入
+    #         strLiteralType(intNum) = strTemp
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－５　最初のファイル名を取得
+#
+# 処理概要：入力フォルダ内の最初のファイル名取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_15_GetFirstFileName():
+    global strInFileName
+    global InFolderName_iter
+    # InFolderName_iter = iter(os.listdir(strInFolderName))
+    InFolderName_iter = iter([x for x in os.listdir(strInFolderName) if os.path.isfile(os.path.join(strInFolderName, x))])
+    strInFileName = next(InFolderName_iter, "")
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－６　ラベル含有禁止文字列取得
+#
+# 処理概要：ラベル判定の際、ラベルに含まれてはいけない文字列を取得する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.27)
+# 更新者  ：
+# *******************************************************************************
+def ps_16_GetForbiddenWordLabel():
+    # strWordFileName = ""  # 情報ファイル名
+    # intFileNumber = 0  # ファイル番号
+    # strWord = ""  # 一時保持用文字列
+    # intMax = 0  # 配列の現在のUbound
+
+    # 配列再定義
+    global strForbiddenWordLabel, strWordFileName_ForbiddenWordLabel
+
+    # セルからファイル名取得
+
+    # ファイル番号を取得（あいているファイル番号）
+    # intFileNumber = FreeFile
+
+    # ファイルのオープン
+    # Open strWordFileName For Input As #intFileNumber
+    for line in bas_key.fn_get_forbidden_word_label():
+        # line = line.replace("\n", "")
+        # line = line.strip()
+        strForbiddenWordLabel.append(line)
+
+    # # ファイルの終わりまで繰り返し
+    # while EOF(intFileNumber) == False:
+
+    #     # 一行読み込み
+    #     Line Input #intFileNumber, strWord
+
+    #     # その行が空行でなければラベル禁止単語配列に保存
+    #     if fn_trim(strWord) != "" :
+
+    #         # 配列の最初の値が空でなければ
+    #         if strForbiddenWordLabel(0) != "" :
+
+    #             # 添え字用変数を１増やす
+    #             intMax = intMax + 1
+
+    #             # 再定義
+    #             ReDim Preserve strForbiddenWordLabel(intMax)
+
+    #         # 配列の最新の要素に代入
+    #         strForbiddenWordLabel(intMax) = strWord
+
+    # # ファイルのクローズ
+    # Close #intFileNumber
+
+
+# *******************************************************************************
+# プロシージャ名称：   １－７　後ろで区切るキーワード取得
+#
+# 処理概要：それ自身の後で区切るキーワード取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_17_GetDivAfterKeyword():
+    # strWordFileName = ""  # キーワード情報ファイル名
+    # intFileNumber = 0  # ファイル番号
+    # strWord = ""  # キーワード（一時保持用）
+    # intMax = 0  # 配列の現在のUbound
+
+    # 配列再定義
+    global strDivideAfter, strWordFileName_DivAfterKeyword
+
+    # セルからファイル名取得
+
+    # # ファイル番号を取得（あいているファイル番号）
+    # intFileNumber = FreeFile
+
+    # # ファイルのオープン
+    # Open strWordFileName For Input As #intFileNumber
+    for line in bas_key.fn_get_div_after_key_word():
+        # line = line.replace("\n", "")
+        # line = line.strip()
+        strDivideAfter.append(line)
+
+    # # ファイルの終わりまで繰り返し
+    # while EOF(intFileNumber) == False:
+
+    #     # 一行読み込み
+    #     Line Input #intFileNumber, strWord
+
+    #     # その行が空行でなければ後ろで区切るキーワード配列に保存
+    #     if fn_trim(strWord) != "" :
+
+    #         # 配列の最初の値が空でないとき
+    #         if strDivideAfter(0) != "" :
+
+    #             # 添え字用変数を１増やす
+    #             intMax = intMax + 1
+
+    #             # 配列の要素を１増やす
+    #             ReDim Preserve strDivideAfter(intMax)
+
+    #         # 配列の最新の要素に代入
+    #         strDivideAfter(intMax) = strWord
+
+    # # ファイルのクローズ
+    # Close #intFileNumber
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２　主処理
+#
+# 処理概要：１ファイルを読み込んで論理行化されたファイルを出力する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2_Main():
+    # 初期処理
+    ps_21_PreOneFile()
+
+    # 主処理（PL/I）
+    while not stop_flag:
+        ps_22_MainOneFile()
+
+    # 終了処理
+    ps_23_AfterOneFile()
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－１　１ファイルに対する初期処理
+#
+# 処理概要：①ファイルのオープン
+#           ②変数の初期化
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_21_PreOneFile():
+    # ①ファイルのオープン
+
+    # あいているファイル番号取得
+    # intInFile = FreeFile
+    global InFile_iter
+    with open(strInFolderName + strInFileName, "r", encoding="cp932", errors="ignore") as infile:
+        InFile_iter = iter(infile.readlines())
+
+    # # 入力ファイルを開く
+    # Open strInFolderName + strInFileName For Input As intInFile
+
+    # # あいているファイル番号取得
+    # intOutFile = FreeFile
+
+    # # 出力ファイルを開く
+    # Open strOutSourceFolderName + strInFileName For Output As #intOutFile
+    # global OutFile
+    # OutFile = open(strOutSourceFolderName + strInFileName, "w", encoding="cp932")
+
+    global strBuffer
+    global flgLiteralContinue
+    global flgBracketContinue
+    global flgDCLContinue
+    global flgNowComment
+    global flgEXEC
+    global flgEXECSQL
+    global flgEXECCICS
+    global intPhysicalLine
+    global strNowLiteralType
+    global intOverlapping
+
+    # ②変数の初期化
+    strBuffer = ""  # バッファ…空文字列
+    flgLiteralContinue = False  # リテラル処理中フラグ…OFF
+    flgBracketContinue = False  # 括弧処理中フラグ…OFF
+    flgDCLContinue = False  # DCL処理中フラグ…OFF
+    flgNowComment = False  # コメント処理中フラグ…OFF
+    flgEXEC = False  # EXEC処理中フラグ…OFF
+    flgEXECSQL = False  # EXECSQL処理中フラグ…off
+    flgEXECCICS = False  # EXECCICS処理中フラグ…OFF
+    intPhysicalLine = 0  # 物理ステップ数…ゼロ
+    strNowLiteralType = ""  # 現在のリテラル記号…空文字列
+    intOverlapping = 0  # 括弧の重複度…ゼロ
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２　１行に対する処理（１ファイルに対する主処理）（PL/I）
+#
+# 処理概要：各行の論理行化
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_22_MainOneFile():
+    # 初期処理
+    ps_221_PreOneLine()
+
+    # 主処理フラグがONの時のみ主処理を行う
+    if flgMainProcess:
+        # 主処理
+        ps_222_MainOneLine()
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－１　１行に対する初期処理（PL/I）
+#
+# 処理概要：行の読み込み、変数初期化、処理対象の判定、整形など
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_221_PreOneLine():
+    global intPhysicalLine, flgOutPut, flgLabel, flgMainProcess, intColon
+    global flgCtrlRecord, stop_flag, strBuffer
+
+    # 変数の初期化
+    flgOutPut = False  # バッファを出力するかどうか…OFF
+    flgCtrlRecord = False  # その行が制御レコードか…OFF
+    flgLabel = False  # その行がラベルか…OFF
+    flgMainProcess = False  # 主処理を行うかどうか…OFF
+    intColon = 0  # 行内のコロン発見桁
+    if not (strBuffer.count("'") % 2 != 0 or strBuffer.count('"') % 2 != 0 or strBuffer.find("/") != -1):
+        strBuffer = strBuffer.rstrip() + " "
+
+    # # 読み込み
+    # Line Input intInFile, strInFileLine
+    global strInFileLine
+    strInFileLine = next(InFile_iter, None)
+    if strInFileLine is None:
+        stop_flag = True
+        return
+    # 230724 MUTB LOW-VALUE Change
+    if low_value_change:
+        strInFileLine = strInFileLine.replace("\x00", bytes.decode(bytes.fromhex(low_value_replace), encoding="CP932"))
+
+    # 制御レコードか判定
+    if fn_left(strInFileLine, 8) == "#@PLANET":
+        flgCtrlRecord = True
+
+    # 制御レコード以外の行に対して以下を行う
+    if not flgCtrlRecord:
+
+        # # 73桁目以降削除
+        # strInFileLine = StrConv(LeftB(StrConv(strInFileLine, vbFromUnicode), 72), vbUnicode)
+
+        # # １桁目削除
+        # strInFileLine = fn_mid(strInFileLine, 2)
+
+        str_encode = strInFileLine.encode("CP932")
+        str_encode = str_encode[1:72]
+        strInFileLine = str_encode.decode("CP932", errors="ignore")
+        # 230724 MUTB LOW-VALUE Change
+        if low_value_change:
+            strInFileLine = strInFileLine.replace("\x00", bytes.decode(bytes.fromhex(low_value_replace), encoding="CP932"))
+
+        # コメント出現時強制分割処理
+        ps_2214_Divide_ByForce()
+
+        # コメント削除
+        ps_2215CommentErace()
+
+        # 作業文字列をトリム
+        strInFileLine = fn_trim(strInFileLine)
+
+        # 物理行カウント
+        intPhysicalLine = intPhysicalLine + 1
+
+        # 作業文字列が空でなければ、以下を行う
+        if strInFileLine != "":
+            # ラベル判定
+            ps_2216_JudgeLabel()
+
+            # 主処理フラグON
+            flgMainProcess = True
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－１－４　コメント出現時強制分割処理（PL/I）
+#
+# 処理概要：リテラル処理継続中・括弧処理継続中にコメントが行頭に来た場合、
+#             現在のバッファを強制的に出力する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2214_Divide_ByForce():
+    # strWork = ""  # 作業用文字列（ローカル）
+    # strTop2ofLine = ""  # 作業文字列の先頭２桁
+
+    # リテラル処理中でもカッコ処理中でもなければ処理を抜ける
+    if (not flgLiteralContinue) and (not flgBracketContinue):
+        return
+
+    # 読みこんだ文字列にスペースを付与（作業効率化のため）
+    # strWork = fn_trim(strInFileLine)
+
+    # 最初の２桁を取得
+    # strTop2ofLine = fn_left(strWork, 2)
+
+    # 最初の２桁が「/*」の時、強制分割
+    # if strTop2ofLine == "/*" :
+
+    # 強制分割処理
+    #     ps_22141_Divide_Byforce2()
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－１－４－１　強制分割
+#
+# 処理概要：強制分割を実際に行う部分
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_22141_Divide_Byforce2():
+    global flgLiteralContinue, flgBracketContinue
+
+    # バッファが空でないとき
+    if strBuffer != "":
+        # バッファを出力
+        psOutputBuffer()
+
+    # リテラル処理中フラグOFF
+    flgLiteralContinue = False
+
+    # 括弧処理中フラグOFF
+    flgBracketContinue = False
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－１－５　コメント部分削除（１）（PL/I）
+#
+# 処理概要：PL/Iコメントを削除（制御部分）
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2215CommentErace():
+    global strInFileLine, flgCommentStartIsInLiteral
+    # strWork = ""  # ローカル作業文字列
+
+    # 行頭がリテラル内かどうかを、全体のリテラル処理中フラグから取得
+    flgCommentStartIsInLiteral = flgLiteralContinue
+
+    # 作業中の文字列をローカル作業用文字列に格納
+    strWork = strInFileLine
+
+    # 作業中文字列を空にする
+    strInFileLine = ""
+
+    # ローカル作業用文字列が空になるまで繰り返し
+    while fn_trim(strWork) != "":
+        # コメント削除処理
+        strWork = ps_22151CommentErace(strWork)
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－１－５－１　コメント部分削除（２）（PL/I）
+#
+# 処理概要：PL/Iコメントを削除（実際の削除部分）
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_22151CommentErace(strWork):
+    global flgNowComment, intLiteralForComCut
+    global flgCommentStartIsInLiteral
+    global strInFileLine, strBeforeComStart
+
+    # intWork = 0  # 作業用数字
+
+    # リテラル終端桁をゼロに設定
+    intLiteralForComCut = 0
+
+    # コメント手前までの文字列を空に設定
+    strBeforeComStart = ""
+
+    # ①行頭がコメントで、行中に「*/」があるとき
+    # Case flgNowComment = True and fn_InStr(strWork, "*/") > 0:
+    if flgNowComment and fn_InStr(strWork, "*/") > 0:
+
+        # コメント終了桁を取得
+        intWork = fn_InStr(strWork, "*/")
+
+        # 現在のコメント終了後の部分を取得
+        strWork = fn_mid(strWork, intWork + 2)
+
+        # フラグをOFFにする
+        flgNowComment = False
+
+    # ②行頭がコメントで、行中に「*/」がないとき（すべてコメントである）
+    # Case flgNowComment = True and fn_InStr(strWork, "*/") = 0:
+    elif flgNowComment and fn_InStr(strWork, "*/") == 0:
+
+        # 作業文字列をNullにする
+        strWork = ""
+
+    # ③行頭がロジックで、行中に「/*」があるとき（「/*」がリテラルの中か外かで処理が変わる）
+    # Case flgNowComment = False and fn_InStr(strWork, "/*") > 0:
+    elif not flgNowComment and fn_InStr(strWork, "/*") > 0:
+
+        # コメント開始行を取得
+        intWork = fn_InStr(strWork, "/*")
+
+        # 「/*」の直前までの文字列を取得
+        strBeforeComStart = fn_left(strWork, intWork - 1)
+
+        # 「/*」がリテラルの中かどうか判定する
+        ps_221511_JudgeCommentStartIsInLiteral(strBeforeComStart)
+
+        # 「/*」がリテラル内のとき
+        if flgCommentStartIsInLiteral:
+
+            # リテラル終端検索
+            # intLiteralForComCut = fn_InStr(intLiteralStartForComCut + 1, strWork, strNowLiteralTypeForComCut)
+            intLiteralForComCut = fn_InStr(strWork, strNowLiteralTypeForComCut, intLiteralStartForComCut + 1)
+
+            # リテラル終端があった時
+            if intLiteralForComCut > 0:
+
+                # リテラル終端までを作業文字列に保存
+                strInFileLine = strInFileLine + fn_left(strWork, intLiteralForComCut)
+
+                # リテラル終端までをローカル作業文字列からカット
+                strWork = fn_mid(strWork, intLiteralForComCut + 1)
+
+                # リテラル内フラグをOFFにする
+                flgCommentStartIsInLiteral = False
+
+            # リテラル終端がなかった時
+            else:
+
+                # ローカル作業文字列を作業文字列に付足す
+                strInFileLine = strInFileLine + strWork
+
+                # ローカル作業文字列を空にする
+                strWork = ""
+
+        # 「/*」がリテラルの外の時（普通にコメントを削除する）
+        else:
+
+            # 「/*」の前までを保存文字列に付け足し、後ろを作業文字列に保存
+            strInFileLine = strInFileLine + strBeforeComStart
+            strWork = fn_mid(strWork, intWork + 2)
+
+            # フラグをONにする
+            flgNowComment = True
+
+    # ④行頭がロジックで、行中に「/*」がない時（すべてロジックである）
+    # Case flgNowComment = False and fn_InStr(strWork, "/*") = 0:
+    elif not flgNowComment and fn_InStr(strWork, "/*") == 0:
+
+        # すべてを保存文字列に付け足す
+        strInFileLine = strInFileLine + strWork
+
+        # 作業文字列をNullにする
+        strWork = ""
+
+    return strWork
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－１－５－１－１　「/*」がリテラル内か判定
+#
+# 処理概要：文字列内に見つかった「/*」がリテラルの中か外かを判定する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_221511_JudgeCommentStartIsInLiteral(strBeforeComStart_2):
+    global flgCommentStartIsInLiteral, strNowLiteralTypeForComCut, intLiteralStartForComCut
+    # strWork2 = ""  # ローカル作業用文字列
+    # intLiteralLocal = 0  # リテラル終端記号の発見桁
+
+    # 現在のリテラル記号を取得
+    strNowLiteralTypeForComCut = strNowLiteralType
+
+    # 作業文字列に「/*」の直前までの文字列を代入
+    strWork2 = strBeforeComStart_2
+
+    # ローカル作業文字列が無くなるまで以下を行う
+    while fn_trim(strWork2) != "":
+
+        # 行頭がリテラル内であれば、リテラルの終わりを探す
+        if flgCommentStartIsInLiteral:
+
+            # リテラルの終わり検索
+            # intLiteralLocal = fn_InStr(strWork2, strNowLiteralTypeForComCut)
+            intLiteralLocal = fn_InStr(strWork2, strNowLiteralTypeForComCut)
+
+            # リテラル終わりがあれば、フラグをOFFにして、strWork2からカット
+            if intLiteralLocal > 0:
+
+                # コメントの開始がリテラル内かのフラグをOFF
+                flgCommentStartIsInLiteral = False
+
+                # リテラル終端桁より後の文字列を取得
+                strWork2 = fn_mid(strWork2, intLiteralLocal + 1)
+
+            # リテラル終わりが無ければリテラル内なので、処理を抜ける
+            else:
+
+                return
+
+        # 行頭がリテラル内でないとき
+        else:
+
+            # リテラルの開始桁を探す
+            strNowLiteralTypeForComCut, intLiteralStartForComCut = psSearchLiteralStartPLI(strWork2,
+                                                                                           strNowLiteralTypeForComCut)
+
+            # リテラルの開始記号があるとき、フラグをONにしてstrWork2からカット
+            if intLiteralStartForComCut > 0:
+
+                # コメントがリテラル内かのフラグをON
+                flgCommentStartIsInLiteral = True
+
+                # リテラル開始桁以降を取得
+                strWork2 = fn_mid(strWork2, intLiteralStartForComCut + 1)
+
+            # リテラルの開始が無ければリテラル外なので、処理を抜ける
+            else:
+
+                return
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－１－６　ラベルの判定
+#
+# 処理概要：その行の先頭がラベルかどうか判定する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_2216_JudgeLabel():
+    global intColon, strBeforeColon, flgLabel
+    # intNum = 0  # 作業用添え字
+    # strPreColon = ""  # コロンの直前までの文字列
+
+    # 文字列内でコロンを検索
+    intColon = fn_InStr(strInFileLine, ":")
+
+    # コロンが無ければ、抜ける
+    if intColon == 0:
+        return
+
+    # コロンを含む、手前までの文字列を取得
+    strBeforeColon = fn_left(strInFileLine, intColon)
+
+    # コロンを含まない、手前までの文字列を取得
+    strPreColon = fn_left(strInFileLine, intColon - 1)
+
+    # それをトリムする
+    strPreColon = fn_trim(strPreColon)
+
+    # 空白なら抜ける
+    if fn_trim(strBeforeColon) == ":":
+        return
+    # 単語２個以上からなるものは、ラベルと判定しない
+    if fn_InStr(fn_trim(strPreColon), " ") > 0:
+        return
+
+    # # 禁止文字列を含まなければラベルと判定する
+    # For intNum = 0 To UBound(strForbiddenWordLabel)
+
+    #     # 禁止文字列を含むならば抜ける
+    #     if fn_InStr(strBeforeColon, strForbiddenWordLabel(intNum)) > 0 :
+    #         return
+
+    # # 配列の次の要素
+    # Next intNum
+    for item in strForbiddenWordLabel:
+        if fn_InStr(strBeforeColon, item) > 0:
+            return
+
+    # ラベルフラグをONにする
+    flgLabel = True
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２　１行に対する主処理
+#
+# 処理概要：整形の完了した１行のコードを論理化して出力する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_222_MainOneLine():
+    # 先頭がラベルと判定されているとき
+    if flgLabel:
+        # ラベルによる出力処理を行う
+        ps_2221_OutPutByLabel()
+
+    # 作業文字列が空になるまで繰り返し
+    while strInFileLine != "":
+        semicolon_process()
+        # 分割・出力処理
+        ps_2222_DivideOutput()
+
+
+# 230724 MUTB セミコロンは改行より優先されます。
+def semicolon_process():
+    global strInFileLine, strBuffer
+    if not ";" in strInFileLine:
+        return
+    if strInFileLine.strip()[-1] == ";":
+        return
+    while ";" in strInFileLine:
+        _str = strInFileLine.split(";", 1)
+        strBuffer = strBuffer + _str[0] + ";"
+        psOutputBuffer()
+        strInFileLine = _str[1]
+    global flgLiteralContinue, flgBracketContinue, flgDCLContinue, flgEXEC, flgEXEC, flgEXECSQL, flgEXECCICS
+    # 全フラグリセット
+    flgLiteralContinue = False
+    flgBracketContinue = False
+    flgDCLContinue = False
+    flgEXEC = False
+    flgEXECSQL = False
+    flgEXECCICS = False
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－１　ラベルによる出力
+#
+# 処理概要：先頭がラベルであるときの分割・出力を行う
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_2221_OutPutByLabel():
+    global strInFileLine, flgLiteralContinue, flgBracketContinue, flgDCLContinue
+    global flgEXEC, flgEXECSQL, flgEXECCICS
+    # バッファが空でないとき、ラベルの前で区切ってログを出す
+    if strBuffer != "":
+        # リテラル処理中の時のログ
+        # if flgLiteralContinue == True :
+        # メッセージ出力
+        # Print #intLogFile, Date + " " + Time + " リテラル処理を強制的にカットしました（ラベル出現） :" _
+        # + strInFileName + intPhysicalLine + "行目"
+
+        # 括弧処理中の時のログ
+        # elif flgBracketContinue == True :
+
+        # メッセージ出力
+        # Print #intLogFile, Date + " " + Time + " 括弧処理を強制的にカットしました（ラベル出現） :" _
+        # + strInFileName + intPhysicalLine + "行目"
+
+        # DCL処理中の時のログ
+        # elif flgDCLContinue == True :
+
+        # メッセージ出力
+        # Print #intLogFile, Date + " " + Time + " DCLステートメント処理を強制的にカットしました（ラベル出現） :" _
+        # + strInFileName + intPhysicalLine + "行目"
+
+        # EXECCICS処理中の時のログ
+        # elif flgEXECCICS == True :
+
+        #     Print #intLogFile, Date + " " + Time + " 「EXEC CICS」処理を強制的にカットしました（ラベル出現） :" _
+        #         + strInFileName + intPhysicalLine + "行目"
+
+        # return
+
+        # EXECSQL処理中の時のログ
+        # elif flgEXECSQL == True :
+
+        #     Print #intLogFile, Date + " " + Time + " 「EXEC SQL」処理を強制的にカットしました（ラベル出現） :" _
+        # + strInFileName + intPhysicalLine + "行目"
+
+        # return
+
+        # その他
+        # else:
+
+        # メッセージ出力
+        # Print #intLogFile, Date + " " + Time + " セミコロンが無かった為ラベルで区切りました :" _
+        # + strInFileName + intPhysicalLine + "行目"
+
+        # バッファ出力
+        psOutputBuffer()
+
+        # 全フラグリセット
+        flgLiteralContinue = False
+        flgBracketContinue = False
+        flgDCLContinue = False
+        flgEXEC = False
+        flgEXECSQL = False
+        flgEXECCICS = False
+
+    # 「:」までの文字列を直接出力
+    # Print #intOutFile, strBeforeColon
+    result.append(strBeforeColon)
+
+    # 「:」までを作業文字列からカットしてトリム
+    strInFileLine = fn_trim(fn_mid(strInFileLine, intColon + 1))
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２　分割・出力処理
+#
+# 処理概要：色々な条件により、分割・出力を行う
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_2222_DivideOutput():
+    global strInFileLine
+    # リテラル処理中なら、リテラル処理
+    if flgLiteralContinue:
+
+        strInFileLine = psWork_1_Literal(strInFileLine)
+
+    # 括弧処理中なら、括弧処理
+    elif flgBracketContinue:
+
+        strInFileLine = psWork_2_Bracket(strInFileLine)
+
+    # DCL処理中なら、DCL処理
+    elif flgDCLContinue:
+
+        strInFileLine = ps_22221_WorkDCL(strInFileLine)
+
+    # EXEC　SQL処理中ならEXEC　SQL処理
+    elif flgEXECSQL:
+
+        strInFileLine = ps_22222_WorkEXEC(strInFileLine)
+
+    # EXEC　CICS処理中ならEXEC　CICS処理
+    elif flgEXECCICS:
+
+        strInFileLine = ps_22222_WorkEXEC(strInFileLine)
+
+    # いずれの処理中でもないとき
+    else:
+
+        # 分割・出力処理
+        ps_22223_WorkOther()
+
+    # 作業文字列をトリム
+    strInFileLine = fn_trim(strInFileLine)
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－１　DCL処理
+#
+# 処理概要：DCLステートメント中のとき、カンマまたはセミコロンによる分割を行う
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_22221_WorkDCL(strLine):
+    global flgLiteralContinue, flgBracketContinue, intOverlapping
+    strFirstFind = ""  # 最初に発見したもの
+    strFirstFindType = ""  # 最初に発見したものの種類
+    # intFirstFind = 0  # 最初に発見したものの発見桁
+    # strBefore = ""  # 行頭からリテラル記号または括弧までの文字列
+
+    while strLine != "" and flgDCLContinue:
+
+        # リテラル記号、括弧検索
+        strFirstFind, strFirstFindType, intFirstFind = psWork_2_Bracket_More(strLine, strFirstFind, strFirstFindType)
+
+        # リテラル記号が先に見つかったとき
+        if strFirstFindType == "Literal":
+
+            # リテラル記号（含む）より前の文字列を取得し、それに対してDCL処理２を行う
+            strBefore = fn_left(strLine, intFirstFind)
+            ps_222211_WorkDCL2(strBefore)
+
+            # リテラル記号までを作業文字列からカット
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+            # 作業文字列に対してリテラル処理
+            flgLiteralContinue = True
+            strLine = psWork_1_Literal(strLine)
+
+        # 括弧記号が先に見つかったとき
+        elif strFirstFind == "(":
+
+            # 括弧記号までを取得し、それに対してDCL処理２を行う
+            strBefore = fn_left(strLine, intFirstFind)
+            ps_222211_WorkDCL2(strBefore)
+
+            # 括弧記号までを作業文字列からカット
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+            # 括弧処理中フラグをONにして、作業文字列に対して括弧処理
+            flgBracketContinue = True
+
+            # 括弧重複度を１にする
+            intOverlapping = 1
+
+            # 括弧処理
+            strLine = psWork_2_Bracket(strLine)
+
+        # どちらも見つからなかったとき
+        else:
+
+            # 作業文字列全てに対してDCL処理２を行う
+            strLine = ps_222211_WorkDCL2(strLine)
+
+    return strLine
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－１－１　DCL処理２
+#
+# 処理概要：カンマまたはセミコロンによる分割を行う
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_222211_WorkDCL2(strWord):
+    global flgDCLContinue, strBuffer
+    # intFind = 0  # 発見桁
+
+    # 作業文字列が空でなく、かつDCL処理中のとき
+    while strWord != "":
+
+        # カンマを検索して桁数を保持
+        # intFind = fn_InStr(strWord, ",")
+        intFind = fn_InStr(strWord, ",")
+
+        # カンマがあったとき
+        if intFind > 0:
+
+            # カンマまでをバッファに付け足す
+            strBuffer = strBuffer + fn_left(strWord, intFind)
+
+            # バッファ出力。
+            # psOutputBuffer()
+
+            # その後作業文字列からカット
+            strWord = fn_mid(strWord, intFind + 1)
+
+        # カンマが無いとき
+        else:
+
+            # セミコロン検索して桁数を保持
+            # intFind = fn_InStr(strWord, ";")
+            intFind = fn_InStr(strWord, ";")
+
+            # セミコロンがあったとき
+            if intFind > 0:
+
+                # セミコロンまでをバッファに付け足す
+                strBuffer = strBuffer + fn_left(strWord, intFind)
+
+                # バッファを出力。
+                psOutputBuffer()
+
+                # その後作業文字列からカット
+                strWord = fn_mid(strWord, intFind + 1)
+
+                # strBuffer = strWord
+
+                # DCL処理中フラグをOFFにする
+                flgDCLContinue = False
+
+            # ないとき
+            else:
+
+                # 処理中の文字列をバッファに付け足す
+                strBuffer = strBuffer + strWord
+
+                # 処理中の文字列を空にする
+                strWord = ""
+
+        # 処理中の文字列をトリム
+        strWord = fn_trim(strWord)
+
+    return strWord
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２　EXEC処理
+#
+# 処理概要：括弧やリテラル内のセミコロンを無視する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_22222_WorkEXEC(strLine):
+    global flgLiteralContinue, flgBracketContinue, intOverlapping
+    strFirstFind = ""  # 最初に発見したもの
+    strFirstFindType = ""  # 最初に発見したものの種類
+    # intFirstFind = 0  # 最初に発見したものの発見桁
+    # strBefore = ""  # 行頭からリテラル記号または括弧までの文字列
+
+    # 作業文字列が空でなく、かつ（EXECSQL処理中またはEXECCICS処理中）のとき
+    while (strLine != "") and (flgEXECSQL or flgEXECCICS):
+
+        # リテラル記号、括弧検索
+        strFirstFind, strFirstFindType, intFirstFind = psWork_2_Bracket_More(strLine, strFirstFind, strFirstFindType)
+
+        # リテラル記号が先に見つかったとき
+        if strFirstFindType == "Literal":
+
+            # リテラル記号（含む）より前の文字列を取得
+            strBefore = fn_left(strLine, intFirstFind)
+
+            # それに対してEXECSQL処理２を行う
+            strBefore = ps_222221_WorkEXEC2(strBefore)
+
+            # リテラル記号までを作業文字列からカット
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+            # 作業文字列に対してリテラル処理
+            flgLiteralContinue = True
+
+            # リテラル処理
+            strLine = psWork_1_Literal(strLine)
+
+        # 括弧記号が先に見つかったとき
+        elif strFirstFind == "(":
+
+            # 括弧記号までを取得
+            strBefore = fn_left(strLine, intFirstFind)
+
+            # それに対してEXECSQL処理２を行う
+            strBefore = ps_222221_WorkEXEC2(strBefore)
+
+            # 括弧記号までを作業文字列からカット
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+            # 括弧処理中フラグをONにして、作業文字列に対して括弧処理
+            flgBracketContinue = True
+
+            # 括弧重複度を１にする
+            intOverlapping = 1
+
+            # 括弧処理
+            strLine = psWork_2_Bracket(strLine)
+
+        # どちらも見つからなかったとき
+        else:
+
+            # 作業文字列全てに対してEXEC処理２を行う
+            strLine = ps_222221_WorkEXEC2(strLine)
+
+    return strLine
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－１　EXEC処理２
+#
+# 処理概要：「EXEC」ステートメントを「;」まで繋げる
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_222221_WorkEXEC2(strLine):
+    global flgEXECSQL, flgEXECCICS, strBuffer, flgEXEC
+    # intFind = 0  # 発見桁
+
+    # 読みこんだ行が空でなく、かつ（EXECSQLまたはEXECCICS処理中）のとき
+    while (strLine != "") and (flgEXECSQL or flgEXECCICS):
+
+        # セミコロン検索
+        # intFind = fn_InStr(strLine, ";")
+        intFind = fn_InStr(strLine, ";")
+
+        # セミコロンがあったとき
+        if intFind > 0:
+
+            # セミコロンまでをバッファに付け足す
+            strBuffer = strBuffer + fn_left(strLine, intFind) + " "
+
+            # セミコロンまでを処理用文字列からカット
+            strLine = fn_mid(strLine, intFind + 1)
+
+            # EXEC関連フラグをOFF
+            flgEXECSQL = False
+            flgEXECCICS = False
+            flgEXEC = False
+
+            # バッファ出力
+            psOutputBuffer()
+
+        # 無かったとき
+        else:
+
+            # 文字列全体を付け足す
+            strBuffer = strBuffer + strLine + " "
+
+            # 作業文字列を空にする
+            strLine = ""
+
+    return strLine
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－３　分割・出力処理
+#
+# 処理概要：リテラル・括弧・EXEC・DCLの外にあるものに対して、分割出力処理を行う
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_22223_WorkOther():
+    global strInFileLine, flgLiteralContinue, flgBracketContinue, intOverlapping
+    global flgDCLContinue, flgEXECSQL, flgEXECCICS
+    strFirstFindType = ""  # いずれの処理中でもないときに最初に見つかった記号の種類
+    strFirstFind = ""  # 最初に見つかった具体的な文字列
+    # intFirstFind = 0  # 見つかったカラム
+    # strBefore = ""  # 最初に見つかったリテラル・括弧・DCL・EXECステートメントまでの桁
+    # intSQL = 0  # EXEC SQLが見つかったときの、SQLの見つかった桁
+    # intCICS = 0  # EXEC CICSが見つかったときの、CICSの見つかった桁
+
+    # 作業文字列整形(文字列の検索を正確にするため）
+    strInFileLine = strInFileLine + " "
+
+    # リテラル開始記号・括弧開始・DCL・EXECステートメント開始の検索
+    strFirstFind, strFirstFindType, intFirstFind = ps_222231_Find_Start(strInFileLine,
+                                                                        strFirstFind,
+                                                                        strFirstFindType)
+
+    # 最初に見つかったのがリテラルのとき
+    if strFirstFindType == "Literal":
+
+        # リテラルの開始桁までを取得
+        strBefore = fn_left(strInFileLine, intFirstFind)
+
+        # リテラル開始桁までを作業文字列からカット
+        strInFileLine = fn_mid(strInFileLine, intFirstFind + 1)
+
+        # リテラルの開始桁までに対してキーワード分割
+        strBefore = ps_222232_DivideKeyWords(strBefore)
+
+        # リテラル処理中フラグをONにする
+        flgLiteralContinue = True
+
+    # 最初に見つかったのが括弧のとき
+    elif strFirstFind == "(":
+
+        # 括弧の開始桁までを取得
+        strBefore = fn_left(strInFileLine, intFirstFind)
+
+        # そこまでを作業文字列からカット
+        strInFileLine = fn_mid(strInFileLine, intFirstFind + 1)
+
+        # 括弧の開始桁までに対してキーワード分割
+        strBefore = ps_222232_DivideKeyWords(strBefore)
+
+        # 括弧処理中フラグをONにする
+        flgBracketContinue = True
+
+        # 括弧重複度を１にする
+        intOverlapping = 1
+
+    # 最初に見つかったのがDCLステートメントのとき
+    elif strFirstFindType == "DCL":
+
+        # DCLのとき
+        if strFirstFind == "DCL":
+
+            # DCLまでを取得
+            strBefore = fn_left(strInFileLine, intFirstFind + 3)
+
+            # そこまでを作業文字列からカット
+            strInFileLine = fn_mid(strInFileLine, intFirstFind + 4)
+
+        # その他の文字列の時
+        else:
+
+            # その手前までを取得
+            strBefore = fn_left(strInFileLine, intFirstFind + 7)
+
+            # そこまでを作業文字列からカット
+            strInFileLine = fn_mid(strInFileLine, intFirstFind + 8)
+
+        # DCLまたはDECLAREまでに対してキーワード分割
+        strBefore = ps_222232_DivideKeyWords(strBefore)
+
+        # DCL処理中フラグをONにする
+        flgDCLContinue = True
+
+    # 最初に見つかったのがEXEC　SQLステートメントのとき
+    elif strFirstFind == "EXECSQL":
+
+        # SQLの見つかった桁を取得
+        # intSQL = fn_InStr(strInFileLine, "SQL ")
+        intSQL = fn_InStr(strInFileLine, "SQL ")
+
+        # SQLまでを取得
+        strBefore = fn_left(strInFileLine, intSQL + 3)
+
+        # そこまでを作業文字列からカット
+        strInFileLine = fn_mid(strInFileLine, intSQL + 4)
+
+        # SQLまでに対してキーワード分割
+        strBefore = ps_222232_DivideKeyWords(strBefore)
+
+        # EXECSQL処理中フラグを立てる
+        flgEXECSQL = True
+
+    # 最初に見つかったのがEXEC　CICSステートメントのとき
+    elif strFirstFindType == "EXECCICS":
+
+        # CICSの見つかった桁を取得
+        # intCICS = fn_InStr(strInFileLine, "CICS ")
+        intCICS = fn_InStr(strInFileLine, "CICS ")
+
+        # CICSまでを取得
+        strBefore = fn_left(strInFileLine, intCICS + 4)
+
+        # そこまでを作業文字列からカット
+        strInFileLine = fn_mid(strInFileLine, intCICS + 5)
+
+        # CICSまでに対してキーワード分割
+        strBefore = ps_222232_DivideKeyWords(strBefore)
+
+        # EXECCICS処理中フラグを立てる
+        flgEXECCICS = True
+
+    # いずれも見つからなかったとき
+    else:
+
+        # 作業文字列全体に対してキーワード分割
+        strInFileLine = ps_222232_DivideKeyWords(strInFileLine)
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－３－１　リテラル・括弧・DCL・EXECステートメント検索
+#
+# 処理概要：リテラル・括弧・EXEC・DCLの開始があるかどうか検索する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.28)
+# 更新者  ：
+# *******************************************************************************
+def ps_222231_Find_Start(strLine, strFirstFind, strFirstFindType):
+    global flgEXEC, strNowLiteralType
+    # intNum = 0  # 作業用添え字
+    # intFind = 0  # 現在検索しているものの発見桁
+
+    # 処理効率化の為、始めに「最初に発見したものの発見桁」を文字列の長さ＋１とする
+    intFirstFind = len(strLine) + 1
+
+    # リテラル記号検索
+    # For intNum = 0 To UBound(strLiteralType)
+    for item in strLiteralType:
+
+        # 今のリテラル開始記号を検索
+        # intFind = fn_InStr(strLine, item)
+        intFind = fn_InStr(strLine, item)
+
+        # 発見して、それが既に発見されたものより前ならば、保存
+        if (intFind > 0) and (intFind < intFirstFind):
+            # 最初に発見した桁数として保存
+            intFirstFind = intFind
+
+            # 最初に発見したリテラル種類として保存
+            strFirstFind = item
+
+            # 最初に発見したものをリテラルとする
+            strFirstFindType = "Literal"
+
+            # 現在のリテラル種類を保存
+            strNowLiteralType = item
+
+    # 括弧開始検索
+    # intFind = fn_InStr(strLine, "(")
+    intFind = fn_InStr(strLine, "(")
+
+    # 見つかって、かつそれまでの発見桁数よりも小さい時
+    if (intFind > 0) and (intFind < intFirstFind):
+        # 最初に発見した桁数として保存
+        intFirstFind = intFind
+
+        # 最初に発見した文字列として保存
+        strFirstFind = "("
+
+        # 最初に発見したものを括弧とする
+        strFirstFindType = "Bracket"
+
+    # DCL検索
+    # intFind = fn_InStr(strLine, "DCL ")
+    intFind = fn_InStr(strLine, "DCL ")
+
+    # 見つかって、かつそれまでの発見桁数よりも小さい時
+    if (intFind > 0) and (intFind < intFirstFind):
+        # 最初に発見した桁数として保存
+        intFirstFind = intFind
+
+        # 最初に発見した文字列として保存
+        strFirstFind = "DCL"
+
+        # 最初に発見したものをDCLとする
+        strFirstFindType = "DCL"
+
+    # 「DECLARE」検索
+    # intFind = fn_InStr(strLine, "DECLARE ")
+    intFind = fn_InStr(strLine, "DECLARE ")
+
+    # 見つかって、かつそれまでの発見桁数よりも小さい時
+    if (intFind > 0) and (intFind < intFirstFind):
+        # 最初に発見した桁数として保存
+        intFirstFind = intFind
+
+        # 最初に発見した文字列として保存
+        strFirstFind = "DECLARE"
+
+        # 最初に発見したものをDCLとする
+        strFirstFindType = "DCL"
+
+    # EXEC検索
+    # intFind = fn_InStr(strLine, "EXEC ")
+    intFind = fn_InStr(strLine, "EXEC ")
+
+    # 見つかって、かつそれまでの発見桁数よりも小さい時
+    if (intFind > 0) and (intFind < intFirstFind):
+        # EXEC処理中フラグON
+        flgEXEC = True
+
+        # 最初に発見したものをEXECとする
+        strFirstFind = "EXEC"
+
+    # SQL検索
+    # intFind = fn_InStr(strLine, "SQL ")
+    intFind = fn_InStr(strLine, "SQL ")
+
+    # 見つかって、かつそれまでの発見桁数よりも小さい時
+    if flgEXEC and (intFind > 1):
+
+        # 最初に発見したものをEXECSQLとする
+        strFirstFind = "EXECSQL"
+
+        # 最初に発見したものの種類をEXECSQLとする
+        strFirstFindType = "EXECSQL"
+
+        # EXECフラグOFF
+        flgEXEC = False
+
+    # CICS検索
+    else:
+
+        # CICS検索
+        # intFind = fn_InStr(strLine, "CICS ")
+        intFind = fn_InStr(strLine, "CICS ")
+
+        # 見つかって、かつそれまでの発見桁数よりも小さい時
+        if flgEXEC and (intFind > 0):
+            # 最初に発見したものをEXECCICSとする
+            strFirstFind = "EXECCICS"
+
+            # 最初に発見したものの種類をEXECCICISとする
+            strFirstFindType = "EXECCICS"
+
+            # EXECフラグOFF
+            flgEXEC = False
+
+    # EXECのみがあったときのエラー処理
+    # if flgEXEC = True and fn_InStr(strLine, "DLI ") == 0 :
+    #
+    #     # メッセージ出力
+    #     Print #intLogFile, Date + " " + Time + " EXECの後にSQLもしくはCICSもしくはDLIがありません :" + strInFileName + _
+    #         " " + intPhysicalLine + "行目"
+    #
+    return strFirstFind, strFirstFindType, intFirstFind
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－３－２　キーワードによる分割
+#
+# 処理概要：キーワードで分割する（キーワード前・後の種類分けがある）
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_222232_DivideKeyWords(strLine):
+    global strBuffer, strFromFile
+    # intFirstFind = 0  # " ",";"のうち先に見つかった方の桁数
+    # strFirstFind = "" * 1  # " ",";"のうち先に見つかった方
+    # strFromFile = ""                 # 見つかった方の直前までの文字列
+
+    strLine = fn_trim(strLine)
+
+    # 作業文字列が空になるまで繰り返し
+    while strLine != "":
+
+        # 文字列を整形
+        strLine = strLine + " "
+
+        # ブランク・セミコロン検索
+        strFirstFind, intFirstFind = ps_2222321_Find_BrankSemicolon(strLine)
+
+        # ブランクが先に見つかった場合
+        if strFirstFind == " ":
+
+            # ブランクの直前までの文字列を取得
+            strFromFile = fn_left(strLine, intFirstFind - 1)
+
+            # キーワード比較
+            ps_2222322_Comp_Keyword()
+
+            # 一致したとき
+            if flgMatching:
+
+                # バッファが空でなく、かつバッファの最後が「%」でない時、今のバッファ出力
+                if (strBuffer != "") and (fn_right(fn_trim(strBuffer), 1) != "%") and not "CALL" in strBuffer.upper():
+                    # バッファ出力モジュール呼び出し
+                    psOutputBuffer()
+
+            # ブランクまでの文字列をバッファに付け足す
+            # strBuffer = strBuffer + strFromFile + " "
+            strBuffer = strBuffer + strFromFile
+            if not (strBuffer.count("'") % 2 != 0 or strBuffer.count('"') % 2 != 0 or strBuffer.find("/") != -1):
+                strBuffer = strBuffer + " "
+            # キーワードの後ろで区切るもののチェック・出力
+            ps_2222323_DivideAfterKeyword()
+
+            # 作業文字列からブランクまでをカット
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+        # セミコロンが先にみつかった場合
+        elif strFirstFind == ";":
+
+            # セミコロンまでの文字列を取得
+            strFromFile = fn_left(strLine, intFirstFind - 1)
+
+            # キーワード比較
+            # if strFromFile != "" :
+            ps_2222322_Comp_Keyword()
+            #
+
+            # 一致したとき、今のバッファ出力
+            if flgMatching and (strBuffer != "")  and not "CALL" in strBuffer.upper():
+                psOutputBuffer()
+
+            # バッファに付け足した後、出力して、作業文字列からカット
+            strBuffer = strBuffer + strFromFile + ";"
+
+            # バッファ出力モジュール呼び出し
+            psOutputBuffer()
+
+            # セミコロンまでを作業文字列からカット
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+        # 文字列を整形
+        strLine = fn_trim(strLine)
+
+    return strLine
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－３－２－１　ブランク･セミコロン検索
+#
+# 処理概要：文字列内のブランク・セミコロンを探す
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2222321_Find_BrankSemicolon(strLine):
+    # intFind = 0  # 発見桁
+
+    # ブランク検索
+    # intFirstFind = fn_InStr(strLine, " ")
+    intFirstFind = fn_InStr(strLine, " ")
+
+    # セミコロン検索
+    # intFind = fn_InStr(strLine, ";")
+    intFind = fn_InStr(strLine, ";")
+
+    # セミコロンの方が先に現れたとき、セミコロンを返す
+    if (intFind > 0) and (intFind < intFirstFind):
+
+        # 先に現れたものをセミコロンに設定
+        strFirstFind = ";"
+
+        # 最初に現れたものの桁数を保存
+        intFirstFind = intFind
+
+    # ブランクの方が先のとき、ブランクを返す
+    else:
+        strFirstFind = " "
+
+    return strFirstFind, intFirstFind
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－３－２－２　キーワード比較
+#
+# 処理概要：キーワードと比較する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2222322_Comp_Keyword():
+    global flgMatching
+    # strCompKeyword = ""  # 比較キーワード変数（単語の頭文字によって変わる）
+    # strFirstWord = ""  # 比較される単語の最初の文字
+    # intLength1 = 0  # 比較対照文字列の長さ
+
+    # 一致フラグ初期化
+    flgMatching = False
+
+    # ファイルから取得した単語から頭文字を取得
+    strFirstWord = fn_left(strFromFile, 1)
+
+    # その単語の長さを取得
+    intLength1 = len(strFromFile)
+
+    # 長さが２未満なら、抜ける
+    if intLength1 < 2:
+        return
+
+    # 比較用変数決定
+    strCompKeyword = ps_2222821_DcdSeq(strFirstWord)
+
+    # 比較
+    ps_2222822_Comp(strCompKeyword, intLength1)
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－３－２－３　後ろで区切るキーワード検索・出力
+#
+# 処理概要：後ろで区切るキーワードならば、バッファにつけてからバッファを出力する
+#           そうでなければ、バッファに付け足す処理を行う
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2222323_DivideAfterKeyword():
+    # intNum = 0  # 作業用添え字
+
+    # ファイルから取得した単語の長さが２未満なら、抜ける
+    if len(strFromFile) < 2:
+        return
+
+    # 配列の最初から最後まで繰り返し
+    for item in strDivideAfter:
+
+        # 一致したら、出力して処理を抜ける
+        if strFromFile == item:
+            # バッファ出力モジュール呼び出し
+            psOutputBuffer()
+            return
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－８－２－１　比較用変数決定
+#
+# 処理概要：比較用の変数決定
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2222821_DcdSeq(strFirstWord):
+    # intordWord = 0  # 先頭文字の文字コード
+
+    # 頭文字の文字コード取得
+    intordWord = ord(strFirstWord)
+
+    # 先頭文字列が「A」～「M」のとき
+    if (intordWord >= ord("A")) and (intordWord <= ord("Z")):
+        # 頭文字によって比較対象文字列が変わる
+        if strFirstWord == "A":
+            return strKeyWord_A
+        elif strFirstWord == "B":
+            return strKeyWord_B
+        elif strFirstWord == "C":
+            return strKeyWord_C
+        elif strFirstWord == "D":
+            return strKeyWord_D
+        elif strFirstWord == "E":
+            return strKeyWord_E
+        elif strFirstWord == "F":
+            return strKeyWord_F
+        elif strFirstWord == "G":
+            return strKeyWord_G
+        elif strFirstWord == "H":
+            return strKeyWord_H
+        elif strFirstWord == "I":
+            return strKeyWord_I
+        elif strFirstWord == "J":
+            return strKeyWord_J
+        elif strFirstWord == "K":
+            return strKeyWord_K
+        elif strFirstWord == "L":
+            return strKeyWord_L
+        elif strFirstWord == "M":
+            return strKeyWord_M
+        elif strFirstWord == "N":
+            return strKeyWord_N
+        elif strFirstWord == "O":
+            return strKeyWord_O
+        elif strFirstWord == "P":
+            return strKeyWord_P
+        elif strFirstWord == "Q":
+            return strKeyWord_Q
+        elif strFirstWord == "R":
+            return strKeyWord_R
+        elif strFirstWord == "S":
+            return strKeyWord_S
+        elif strFirstWord == "T":
+            return strKeyWord_T
+        elif strFirstWord == "U":
+            return strKeyWord_U
+        elif strFirstWord == "V":
+            return strKeyWord_V
+        elif strFirstWord == "W":
+            return strKeyWord_W
+        elif strFirstWord == "X":
+            return strKeyWord_X
+        elif strFirstWord == "Y":
+            return strKeyWord_Y
+        elif strFirstWord == "Z":
+            return strKeyWord_Z
+
+    # 先頭文字列が数字である時
+    # elif IsNumeric(strFirstWord) == True :
+
+    #     ps_22228211_JudgeNumericSeq(strCompKeyword)()
+
+    # その他の文字の時
+    else:
+
+        # その他キーワードの文字列と比較
+        return strKeyWord_OTHER
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－２－２－２－８－２－２　単語比較
+#
+# 処理概要：実際の単語の比較部分
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_2222822_Comp(strCompKeyword, intLength1):
+    global strFromKeyword, flgMatching
+    # intStartRead = 0  # 読み込み開始桁
+    # intLength = 0  # キーワード文字列全体の文字列長
+
+    # intLength2 = 0  # キーワード文字列側の文字列長
+
+    # 読み込み開始桁を１とする
+    intStartRead = 1
+
+    # 比較キーワード格納文字列の長さを取得
+    intLength = len(strCompKeyword)
+
+    # 比較キーワードの最後まで繰り返し
+    while intStartRead < intLength:
+
+        # 読み込み開始桁から２桁読む（キーワード長取得）
+        intLength2 = int(fn_mid(strCompKeyword, intStartRead, 2))
+
+        # 読み込み開始桁数を２増やす
+        intStartRead = intStartRead + 2
+
+        # 文字列長が一致したら、文字列を比べる
+        if intLength1 == intLength2:
+
+            # キーワードを、格納している文字列から取得する
+            strFromKeyword = fn_mid(strCompKeyword, intStartRead, intLength2)
+
+            # 文字列が一致したら、一致フラグをONにしてループを抜ける
+            if strFromFile == strFromKeyword:
+                # 一致フラグON
+                flgMatching = True
+                return
+
+        # 一致しない場合、読み込み開始桁を文字列長の分だけ増やす
+        intStartRead = intStartRead + int(intLength2)
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－３　１ファイルに対する終了処理
+#
+# 処理概要：①バッファの残りの出力
+#           ②ログ吐き出し
+#           ③ファイルのクローズ（入力・出力）
+#           ④次のファイル名を（あれば）取得
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_23_AfterOneFile():
+    global strBuffer, strInFileName, stop_flag, result
+    strBuffer = fn_trim(strBuffer)
+
+    # ①バッファに残りがあれば、出力
+    if strBuffer != "":
+        # バッファ出力モジュール呼び出し
+        psOutputBuffer()
+
+        # ②ログ吐き出し
+        ps_231_AfterOneFile_Log()
+
+    # # ②ファイルのクローズ
+    # Close intInFile
+    # Close #intOutFile
+    # InFile.close()
+    # OutFile.close()
+
+    # Print Out File
+    with open(os.path.join(strOutFolderName, strInFileName), "w", encoding="cp932", errors="ignore") as f:
+        for item in result:
+            f.write(f"{item}\n")
+
+    # ③次のファイル名取得
+    strInFileName = next(InFolderName_iter, None)
+    stop_flag = False
+    result = []
+    if strInFileName is None:
+        strInFileName = ""
+
+
+# *******************************************************************************
+# プロシージャ名称：   ２－３－１　１ファイル異常終了処理
+#
+# 処理概要：リテラル・「==」・括弧・EXECCICS、EXECSQL処理中でEOFが現れたものを書き出し
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_231_AfterOneFile_Log():
+    pass
+
+    # リテラル処理中
+    # if flgLiteralContinue == True :
+
+    # メッセージ出力
+    # Print #intLogFile, Date + " " + Time + " リテラル処理を強制的にカットしました。（EOF） :" _
+    # + strInFileName
+
+    # 括弧処理中（PL/I）
+    # elif flgBracketContinue == True :
+
+    # メッセージ出力
+    # Print #intLogFile, Date + " " + Time + " 括弧処理を強制的にカットしました。（EOF） :" _
+    # + strInFileName
+
+    # EXECSQL処理中
+    # elif flgEXECSQL == True :
+
+    # メッセージ出力
+    # Print #intLogFile, Date + " " + Time + " EXEC SQL処理を強制的にカットしました。（EOF） :" _
+    # + strInFileName
+
+    # EXECCICS処理中
+    # elif flgEXECCICS == True :
+
+    # メッセージ出力
+    # Print #intLogFile, Date + " " + Time + " EXEC CICS処理を強制的にカットしました。（EOF） :" _
+    # + strInFileName
+
+
+# *******************************************************************************
+# プロシージャ名称：   ３　終了処理
+#
+# 処理概要：ログファイルのクローズ・メッセージ出力
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def ps_3_After():
+    print("\nPrepared OK.")
+
+    # ログファイルクローズ
+    # Close #intLogFile
+
+    # 終了メッセージ
+    # MsgBox ("完了しました")
+
+    #
+
+
+# *******************************************************************************
+# プロシージャ名称：   バッファ出力
+#
+# 処理概要：①現在のバッファを書き出す
+#           ②バッファを空にする
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def psOutputBuffer():
+    global strBuffer, result
+    strBuffer = strBuffer.lstrip()
+    # 現在のバッファを出力ファイルに書き出す
+    # Print #intOutFile, strBuffer
+    if strBuffer != "":
+        # 230724 MUTB セミコロンは改行より優先されます。
+        # Final Delete Comment
+        match = re.search(r"/\*.*?\*/", strBuffer)
+        if match:
+            strBuffer = strBuffer.replace(match.group(), "")
+        result.append(strBuffer)
+    # Debug.Print strBuffer
+
+    # バッファを空にする
+    strBuffer = ""
+
+
+# *******************************************************************************
+# プロシージャ名称：   PL/Iのリテラル開始検索
+#
+# 処理概要：PL/Iの行（または行の一部分）を引き渡すと、リテラル開始桁および
+#           リテラル開始記号があるときにはその記号種類を返す
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def psSearchLiteralStartPLI(strWork, strLitType):
+    # intWork = 0  # 作業用数字
+    # intFound = 0  # リテラル開始記号発見桁
+
+    # リテラル開始桁を、便宜的に文字列長＋１にする
+    intLitStart = len(strWork) + 1
+
+    # 発見桁の初期値はゼロ
+    # intFound = 0
+
+    # リテラル記号全てに対して以下の処理
+    for item in strLiteralType:
+
+        # intFound = fn_InStr(strWork, strLiteralType(intWork))
+        intFound = fn_InStr(strWork, item)
+        # リテラル記号発見桁が今の作業用数字より小さければ、それをリテラル開始桁とする
+        # if (intLitStart > fn_InStr(strWork, intFound)) and (intFound != 0) :
+        if (intLitStart > fn_InStr(strWork, intFound)) and (intFound != 0):
+            # 発見桁をリテラル開始桁とする
+            intLitStart = intFound
+
+            # その種類も取得
+            strLitType = item
+
+    # リテラル開始桁が発見されていなかった場合
+    if intLitStart == len(strWork) + 1:
+        # 発見桁をゼロにする
+        intLitStart = 0
+
+    return strLitType, intLitStart
+
+
+# *******************************************************************************
+# プロシージャ名称：   リテラル処理
+#
+# 処理概要：リテラルの終わりがくるまで読み飛ばす
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+
+
+def psWork_1_Literal(strLine):
+    global strBuffer, flgLiteralContinue
+
+    # strInLiteral = ""  # リテラル終了桁まで（リテラル記号含む）の文字列
+
+    # 与えられた文字列内の、現在のリテラル記号を検索
+    # int = fn_InStr(strLine, strNowLiteralType)
+    int_1 = fn_InStr(strLine, strNowLiteralType)
+
+    # リテラル記号があったとき
+    if int_1 > 0:
+
+        # リテラル終了までの文字列を取得
+        strInLiteral = fn_left(strLine, int_1)
+
+        # リテラル終了までの文字列をバッファに付け足す
+        strBuffer = strBuffer + strInLiteral
+
+        # リテラル終了桁までを作業文字列から削除
+        strLine = fn_mid(strLine, int_1 + 1)
+
+        # リテラル処理中フラグをOFFにする
+        flgLiteralContinue = False
+
+    # リテラル記号がなかったとき
+    else:
+
+        # 作業文字列全体をバッファに付け足す
+        strBuffer = strBuffer + strLine
+
+        # 作業文字列を空にする
+        strLine = ""
+    return strLine
+
+
+# *******************************************************************************
+# プロシージャ名称：   括弧処理
+#
+# 処理概要：括弧の終わりがくるまで読み飛ばす
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def psWork_2_Bracket(strLine):
+    global intOverlapping, strBuffer, flgLiteralContinue, flgBracketContinue
+    # intFirstFind = 0  # 括弧、括弧閉じ、リテラル記号の最初に現れた桁
+    strFirstFind = ""  # 括弧、括弧閉じ、リテラル記号のうち最初に現れたもの
+    strFirstFindType = ""  # 括弧かリテラル記号か（現れたもののタイプ）
+
+    while (fn_trim(strLine) != "") and (intOverlapping > 0):
+
+        # 括弧、括弧閉じ、リテラル記号の検索
+        strFirstFind, strFirstFindType, intFirstFind = psWork_2_Bracket_More(strLine, strFirstFind, strFirstFindType)
+
+        # 最初に現れたものがリテラル記号のとき
+        if strFirstFindType == "Literal":
+
+            # リテラル開始記号までをバッファに保存
+            strBuffer = strBuffer + fn_left(strLine, intFirstFind)
+
+            # そこまでを作業文字列からカット
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+            # リテラル継続処理フラグをON
+            flgLiteralContinue = True
+
+            # リテラル処理
+            strLine = psWork_1_Literal(strLine)
+
+        # 括弧の開始が見つかった
+        elif strFirstFind == "(":
+
+            # 括弧記号までをバッファに保存して、そこまでを作業文字列からカット
+            strBuffer = strBuffer + fn_left(strLine, intFirstFind)
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+            # 重複度を１増やす
+            intOverlapping = intOverlapping + 1
+
+        # 括弧閉じが見つかった
+        elif strFirstFind == ")":
+
+            # 括弧閉じ記号までをバッファに保存して、そこまでを作業文字列からカット
+            strBuffer = strBuffer + fn_left(strLine, intFirstFind)
+            strLine = fn_mid(strLine, intFirstFind + 1)
+
+            # 重複度を１減らす
+            intOverlapping = intOverlapping - 1
+
+            # 重複度が0に戻ったとき
+            if intOverlapping == 0:
+                # 括弧処理中フラグをOFFにする
+                flgBracketContinue = False
+
+        # どれも見つからなかったとき
+        else:
+
+            # 作業文字列全体をバッファに保存して
+            strBuffer = strBuffer + strLine
+
+            # 空にする
+            strLine = ""
+
+    return strLine
+
+
+# *******************************************************************************
+# プロシージャ名称：   括弧・括弧閉じ・リテラル記号検索
+#
+# 処理概要：括弧・括弧閉じ・リテラルの記号のうち、最初に来るものを検索する
+#
+# 作成者  ：門谷     Ver1.0(2003.03.12)
+# 更新者  ：
+# *******************************************************************************
+def psWork_2_Bracket_More(strLine, strFirstFind, strFirstFindType):
+    global strNowLiteralType
+    # intNum = 0  # 作業用添え字
+    # intFind = 0  # 現在検索しているものの発見桁
+
+    # 処理効率化の為、始めに「最初に発見したものの発見桁」を文字列の長さ＋１とする
+    intFirstFind = len(strLine) + 1
+
+    # リテラル記号検索
+    for item in strLiteralType:
+
+        # 今のリテラル開始記号を検索
+        # intFind = fn_InStr(strLine, strLiteralType(intNum))
+        intFind = fn_InStr(strLine, item)
+
+        # 発見して、それが既に発見されたものより前ならば、保存
+        if (intFind > 0) and (intFind < intFirstFind):
+            # それまでの「最初に発見された桁数」を更新
+            intFirstFind = intFind
+
+            # それまでの「最初に発見されたもの」を更新
+            strFirstFind = item
+
+            # それまでの「最初に発見されたものの種類」を更新
+            strFirstFindType = "Literal"
+
+            # 現在のリテラル記号を更新
+            strNowLiteralType = item
+
+    # 括弧開始検索
+    # intFind = fn_InStr(strLine, "(")
+    intFind = fn_InStr(strLine, "(")
+    if (intFind > 0) and (intFind < intFirstFind):
+        # それまでの「最初に発見された桁数」を更新
+        intFirstFind = intFind
+
+        # それまでの「最初に発見されたもの」を更新
+        strFirstFind = "("
+
+        # それまでの「最初に発見されたものの種類」を更新
+        strFirstFindType = "Bracket"
+
+    # 括弧閉じ検索
+    # intFind = fn_InStr(strLine, ")")
+    intFind = fn_InStr(strLine, ")")
+    if (intFind > 0) and (intFind < intFirstFind):
+        # それまでの「最初に発見された桁数」を更新
+        intFirstFind = intFind
+
+        # それまでの「最初に発見されたもの」を更新
+        strFirstFind = ")"
+
+        # それまでの「最初に発見されたものの種類」を更新
+        strFirstFindType = "Bracket"
+
+    # 見つかっていなければ、発見桁を0に戻し、変数を全てリセット
+    if intFirstFind == len(strLine) + 1:
+        # それまでの「最初に発見された桁数」を更新
+        intFirstFind = 0
+
+        # それまでの「最初に発見されたもの」を更新
+        strFirstFind = ""
+
+        # それまでの「最初に発見されたものの種類」を更新
+        strFirstFindType = ""
+    return strFirstFind, strFirstFindType, intFirstFind
+
+
+def bas_main(inFolder, outFolder, low_value_flag, low_value_after_value):
+    global strInFolderName, strOutFolderName, low_value_replace, low_value_change
+    strInFolderName = inFolder
+    strOutFolderName = outFolder
+    if low_value_flag:
+        low_value_change = True
+        low_value_replace = low_value_after_value
+    psALL()
+
+# if __name__ == "__main__":
+#     inFolder = sys.argv[1]
+#     outFolder = sys.argv[2]
+#     low_value_flag = False
+#     low_value_after_value = ""
+#     if len(sys.argv) > 3:
+#         i = 3
+#         while i < len(sys.argv):
+#             if sys.argv[i] == "--low-value":
+#                 low_value_flag = True
+#                 i += 1
+#                 if not i + 1 > len(sys.argv):
+#                     low_value_after_value = sys.argv[i]
+#             i += 1
+#     bas_main(inFolder, outFolder, low_value_flag, low_value_after_value)

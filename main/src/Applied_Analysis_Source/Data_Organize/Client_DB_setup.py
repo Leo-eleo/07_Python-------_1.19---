@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+# -*- coding: cp932 -*-
+
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from Common_analysis import *
+
+
+language_analysis_db_tables = ["‡@JCL_Šî–{î•ñ","‡@JCL_STEP_SYSIN","‡@JCL_STEP_SYSIN2","‡@JCL_STEPî•ñ","‡@JCL_PGM_DSN","‡@JCL_CMDî•ñ","‡@PROC_PARM","‡ACOBOL_CMDî•ñ","‡ACOBOL_ŠÖ˜A‘Y","‡ACOBOL_Šî–{î•ñ","‡ACOBOL_“üo—Íî•ñ1","‡ACOBOL_“üo—Íî•ñ2","‡ACOBOL_“üo—Íî•ñ3"]
+client_db_tables = ["ŒÚ‹q•Ê_JCL_Šî–{î•ñ","ŒÚ‹q•Ê_JCL_STEP_SYSIN","ŒÚ‹q•Ê_JCL_STEP_SYSIN","ŒÚ‹q•Ê_JCL_STEPî•ñ","ŒÚ‹q•Ê_JCL_PGM_DSN","ŒÚ‹q•Ê_JCL_CMDî•ñ","ŒÚ‹q•Ê_PROC_PARM","ŒÚ‹q•Ê_COBOL_CMDî•ñ","ŒÚ‹q•Ê_COBOL_ŠÖ˜A‘Y","ŒÚ‹q•Ê_COBOL_Šî–{î•ñ","ŒÚ‹q•Ê_COBOL_“üo—Íî•ñ1","ŒÚ‹q•Ê_COBOL_“üo—Íî•ñ2","ŒÚ‹q•Ê_COBOL_“üo—Íî•ñ3"]
+
+def main(output_path,input_path,IsDelete):
+    
+
+    print("start preparation for analysis.")
+
+    if type(IsDelete) != bool:
+        IsDelete = IsDelete == "True"
+        
+    conn_out = connect_accdb(output_path)
+    cursor_out = conn_out.cursor()
+    
+    if IsDelete == True:
+        print("you chose to clear db, so clear the remaining data.")
+        
+        for table in client_db_tables:
+            sql,_ = make_delete_sql(table,[],[])
+            cursor_out.execute(sql)
+            conn_out.commit()
+            
+        conn_out.close()
+        compact_accdb(output_path)
+        conn_out = connect_accdb(output_path)
+        cursor_out = conn_out.cursor()
+
+    files = glob_files(input_path)
+    for db_in_file in files:
+        conn_in = connect_accdb(db_in_file)
+        
+        for table_in,table_out in zip(language_analysis_db_tables,client_db_tables):
+            
+            if table_in in ["‡ACOBOL_“üo—Íî•ñ2","‡ACOBOL_“üo—Íî•ñ3"]:
+                print("{}‚Í—e—Ê§ŒÀ‚Ì‚½‚ßA’Ç‰Á‚ğƒXƒLƒbƒv‚µ‚Ü‚·B".format(table_in))
+                continue
+            
+            if table_in == "‡ACOBOL_CMDî•ñ":
+                sql =   """\
+                        SELECT * FROM ‡ACOBOL_CMDî•ñ WHERE CMD•ª—Ş = 'CALL'
+                        """
+            else:
+                sql = "SELECT * FROM "+table_in
+                
+            df = pd.read_sql(sql,conn_in)
+            df.fillna("",inplace=True)
+            keys = df.columns.tolist()
+            if "AUTO_KEY" in keys:
+                keys.remove("AUTO_KEY")
+            values = df[keys].values.tolist()
+            values = take_all_extensions(values)
+            
+            for value in values:
+                sql,v = make_insert_sql(table_out,value,keys)
+                cursor_out.execute(sql,v)
+                
+                
+            if values:
+                conn_out.close()
+                compact_accdb(output_path)
+                conn_out = connect_accdb(output_path)
+                cursor_out = conn_out.cursor()
+    
+    print("finish preparation")
+if __name__ == "__main__":     
+    main(sys.argv[1],sys.argv[2],sys.argv[3])
