@@ -176,8 +176,8 @@ class âûóp_å⁄ãqï _JCL_STEP_SYSIN:
     def _delete_all(self):
         sql,values = make_delete_sql(self.dbname,[],[])
         global conn,cursor
-        #cursor.execute(sql,values)
-        #conn.commit()
+        cursor.execute(sql,values)
+        conn.commit()
         
         
     def update_all(self):
@@ -359,8 +359,8 @@ class âûóp_å⁄ãqï _JCL_PGM_DSN:
     def _delete_all(self):
         sql,values = make_delete_sql(self.dbname,[],[])
         global conn,cursor
-        #cursor.execute(sql,values)
-        #conn.commit()
+        cursor.execute(sql,values)
+        conn.commit()
         
         
     def update_all(self):
@@ -494,8 +494,8 @@ class âûóp_UTL_STEPï _IOèÓïÒ:
     def _delete_all(self):
         sql,values = make_delete_sql(self.dbname,[],[])
         global conn,cursor
-        #cursor.execute(sql,values)
-        #conn.commit()
+        cursor.execute(sql,values)
+        conn.commit()
         
         
     def update_all(self):
