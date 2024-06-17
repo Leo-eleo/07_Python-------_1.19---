@@ -37,7 +37,9 @@ L_SYSIN = ""
 L_DSN = ""
 L_SCHEMAKUBUN = ""
 P_データ種別 = ""
-P_入出力判定 = ""
+#'20240614 DELETE jiaqi.chen
+# P_入出力判定 = ""
+#'20240614 DELETE 
 TMP_DSN = ""
 PGM_PROC = ""
 BMCP_PGM = ""
@@ -656,9 +658,12 @@ def DSN情報なし時処理(ActSheet_x,data):
 def DSN情報有り時処理(P_PARAM,data,data2):
     global ActSheet,ActSheet_x
     global JCL_NAME_WK,PGM_NAME,STEP_SEQ,JCL_NAME_SV,JOB_SEQ_SV,STEP_SEQ_SV,PROC_ID
-    global PGM_SYSIN,L_GDG,L_DISP,L_SYSIN,L_SCHEMAKUBUN,P_データ種別,P_入出力判定,TMP_DSN,PGM_PROC,BMCP_PGM,parm
+    global PGM_SYSIN,L_GDG,L_DISP,L_SYSIN,L_SCHEMAKUBUN,P_データ種別,TMP_DSN,PGM_PROC,BMCP_PGM,parm
     global 分割文字列
     global 入出力判定_IMSDB_,GET_PROC_PGM_,変数値補正_,Select_BMCP_PGM_,入出力判定_
+    #'20240614 ADD jiaqi.chen
+    P_入出力判定 = ""
+    #'ADD END
 
     #  'step_seq = step_seq + 1
     ActSheet_x = [""]*45
