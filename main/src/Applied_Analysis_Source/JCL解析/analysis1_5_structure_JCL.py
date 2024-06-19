@@ -120,7 +120,14 @@ class SUB_SQL¶¬_JCL_2:
             self.setup()
             
         global ƒ‰ƒCƒuƒ‰ƒŠID,ƒtƒ@ƒCƒ‹–¼,JOB_SEQ,JOB_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC, DD_NAME, SYSIN_SEQ,SYSIN_LINE
-  
+
+        # ADD 20240618 yi.a.qian
+        # PROC_NAME Setting
+        if JOB_SEQ == 0:
+            if STEP_PROC == "":
+                global PROC_ID
+                STEP_PROC = PROC_ID
+        # ADD END
         key_list = ["LIBRARY_ID","JCL_NAME","JOB_SEQ","JOB_ID","STEP_SEQ","STEP_ID","PGM_NAME","PROC_NAME","SYSIN_PGM","SYSIN_DD","SYSIN_SEQ","SYSIN"]
         value_list = [ƒ‰ƒCƒuƒ‰ƒŠID,ƒtƒ@ƒCƒ‹–¼,JOB_SEQ,JOB_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,"", DD_NAME, SYSIN_SEQ,DB•¶Žš(SYSIN_LINE)]
         
@@ -155,9 +162,15 @@ class SUB_SQL¶¬_JCL_3:
             self.setup()
             
         global ƒ‰ƒCƒuƒ‰ƒŠID,ƒtƒ@ƒCƒ‹–¼,JOB_SEQ, JOB_ID,PROC_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,STEP_PARM1,STEP_PARM2
-  
+
         STEP_SEQ += 1
-        
+        # ADD 20240618 yi.a.qian
+        # PROC_NAME Setting
+        if JOB_SEQ == 0:
+            if STEP_PROC == "":
+                # global PROC_ID
+                STEP_PROC = PROC_ID
+        # ADD END
         key_list = ["LIBRARY_ID","JCL_NAME","JOB_SEQ","JOB_ID","PROC_ID","STEP_SEQ","STEP_NAME","PGM_NAME","PROC_NAME","PARM_VAR_LIST","PARM_VALUE_LIST"]
         value_list = [ƒ‰ƒCƒuƒ‰ƒŠID,ƒtƒ@ƒCƒ‹–¼,JOB_SEQ, JOB_ID,PROC_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,STEP_PARM1,DB•¶Žš(STEP_PARM2)]
         
@@ -192,7 +205,13 @@ class SUB_SQL¶¬_JCL_4:
             
         global ƒ‰ƒCƒuƒ‰ƒŠID,ƒtƒ@ƒCƒ‹–¼,JOB_SEQ,JOB_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,DD_NAME,DD_DSN,DD_GDG,DD_AAUTO¢‘ã,DD_SYSIN,DD_DISP,DD_SYSOUT,DD_WRITER,DD_FORM,DD_UNIT,DD_SPACE,DD_RECFM,DD_LRECL,DD_BLKSIZE,DD_VOL,DD_LABEL
         
-      
+        # ADD 20240618 yi.a.qian
+        # PROC_NAME Setting
+        if JOB_SEQ == 0:
+            if STEP_PROC == "":
+                global PROC_ID
+                STEP_PROC = PROC_ID
+        # ADD END
         key_list = ["LIBRARY_ID","JCL_NAME","JOB_SEQ","JOB_ID","STEP_SEQ","STEP_NAME","PGM_NAME","PROC_NAME","SYSIN_PGM","DD_NAME","DSN","GDG","SYSIN","DISP","SYSOUT","WRITER","FORM","UNIT","SPACE_Q","DCB_RECFM","DCB_LRECL","DCB_BLKSIZE","VOL","LABEL"]
         value_list = [ƒ‰ƒCƒuƒ‰ƒŠID,ƒtƒ@ƒCƒ‹–¼,JOB_SEQ,JOB_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,"",DD_NAME,DD_DSN,DD_GDG + DD_AAUTO¢‘ã,DD_SYSIN,DD_DISP,DD_SYSOUT,DD_WRITER,DD_FORM,DD_UNIT,DD_SPACE,DD_RECFM,DD_LRECL,DD_BLKSIZE,DD_VOL,DD_LABEL]
         
@@ -233,7 +252,13 @@ class SUB_SQL¶¬_JCL_5:
            L_STEP_SEQ = STEP_SEQ
 
         CMD_SEQ = CMD_SEQ + 1
-  
+        # ADD 20240618 yi.a.qian
+        # PROC_NAME Setting
+        if JOB_SEQ == 0:
+            if STEP_PROC == "":
+                global PROC_ID
+                STEP_PROC = PROC_ID
+        # ADD END
         key_list = ["Ž‘ŽYID","JOB_SEQ","JCL_ID","STEP_SEQ","STEP_NAME","PGM_NAME","PROC_NAME","DD_NAME","CMD_SEQ","Œ³Ž‘ŽYsî•ñ","CMD•ª—Þ","PARM","sCHKŒ‹‰Ê"]
         value_list = [ƒtƒ@ƒCƒ‹–¼,JOB_SEQ,JOB_ID,L_STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,DD_NAME,CMD_SEQ,Œ³Ž‘ŽYs,•ªÍsTYPE,ŒŸõs•¶Žš—ñ,sCHK]
         
@@ -757,11 +782,13 @@ def analysis1_5_structure_JCL(TokenSheet2,JCLSheet,fileName,conn,cursor, Ý’èðŒ
 
    
     #'“ü—Íƒtƒ@ƒCƒ‹’PˆÊ‚Å‰Šú‰»
-    ƒtƒ@ƒCƒ‹–¼,ƒ‰ƒCƒuƒ‰ƒŠID,_,_ = GetFileInfo(fileName)
+    # UPD 20240618 yi.a.qian
+    ƒtƒ@ƒCƒ‹–¼,ƒ‰ƒCƒuƒ‰ƒŠID,_,member = GetFileInfo(fileName)
     
-    JOB_ID = ""
+    JOB_ID = member
     JOB_SEQ = 0
-    PROC_ID = ""
+    PROC_ID = member
+    # UPD END
     #'JCL•ª—Þ = "ŠO•”PROC" 'ƒpƒ‰ƒ[ƒ^‚ª‚È‚¢ê‡APROCƒL[ƒ[ƒh‚ª‚È‚¢ê‡‚ª‚ ‚é 201911MHI‘Î‰ž‚Å•s‹ï‡‚ªo‚é‚½‚ßƒRƒƒ“ƒg‰»
     JCL•ª—Þ = ""
     DD_NAME = ""
@@ -791,6 +818,9 @@ def analysis1_5_structure_JCL(TokenSheet2,JCLSheet,fileName,conn,cursor, Ý’èðŒ
         if CMD_fld ==  "JOB":
             JOB_ID = Name_fld
             JOB_SEQ = JOB_SEQ + 1
+            # ADD 20240618 yi.a.qian
+            PROC_ID = ""
+            # ADD END
             JCL•ª—Þ = "JCL"
             DD_NAME = ""
           #  'ŒŸõ—ñ = 3         'TokenSheet2@—ñƒ|ƒCƒ“ƒ^

@@ -15,6 +15,9 @@ from Common_analysis import *
 EndLineString = " "*69 ### JCL,PROC における終了行
 AAUTO世代情報管理 = "①A-AUTO世代のまま出力"
 strREC = ""
+# ADD 20240619 yi.a.qian
+IN_LINE_COMMENT_STR = ["<<-", "<-"]
+# ADD END
 
 def get_ZENKAKU_str(string,HANKAKU_start,HANKAKU_len):
     num = 0
@@ -123,8 +126,15 @@ def SUB_PC判定_JCL():
         COMMENT文字列 = ""
     else:
         COMMENT文字列 = Mid(strREC, COM_開始桁, 72 - COM_開始桁+1)
-    
- 
+
+# ADD 20240619 yi.a.qian
+def remove_inline_comment(s: str) -> str:
+    for comment_str in IN_LINE_COMMENT_STR:
+        if comment_str in s:
+            return s[:s.index(comment_str)]
+    return s
+# ADD END
+
 def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
     
     global DLM_flg,最終行_flg,解析中止_flg, NET行継続,A継続,C継続,P継続,IF継続,strREC
@@ -155,7 +165,10 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
         for rec_index, strREC in enumerate(lines):
         # UPD END
             
-            strREC = strREC.replace("\n","")
+            # UPD 20240619 yi.a.qian
+            # strREC = strREC.replace("\n","")
+            strREC = remove_inline_comment(strREC.replace("\n",""))
+            # UPD END
             TmpSheet_GYO = [""]*12
 
             # ADD 20240613 yi.a.qian
