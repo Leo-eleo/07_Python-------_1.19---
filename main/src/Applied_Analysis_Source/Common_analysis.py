@@ -154,7 +154,7 @@ def write_excel_multi_sheet(filename,df,sheet_name,path,output_header=output_hea
         df = pd.DataFrame(list,columns=output_header)
         df.to_excel(writer, sheet_name=sheet_name,index=False)
         
-    writer._save()
+    #writer._save()
     writer.close()
     
 def write_excel_multi_sheet2(filename,dfs,sheet_names,path,output_headers=output_header):
@@ -181,7 +181,7 @@ def write_excel_multi_sheet2(filename,dfs,sheet_names,path,output_headers=output
         df = pd.DataFrame(list,columns=header)
         df.to_excel(writer, sheet_name=sheet_name,index=False)
         
-    writer._save()
+    #writer._save()
     writer.close()
       
       
@@ -192,7 +192,7 @@ def write_excel_multi_sheet3(filename,df_list,sheet_name_list,path,output_header
         df = pd.DataFrame(list,columns=output_header)
         df.to_excel(writer, sheet_name=sheet_name,index=False)
         
-    writer._save()
+    #writer._save()
     writer.close()
     
 
@@ -218,7 +218,7 @@ def write_excel_multi_sheet4(filename,df_list,sheet_name_list,path,output_header
         df = pd.DataFrame(data_list,columns=output_header)
         df.to_excel(writer, sheet_name=sheet_name,index=False)
         
-    writer._save()
+    #writer._save()
     writer.close()
     
 def write_excel_multi_sheet5(filename,dfs,sheet_names,path,output_headers):
@@ -244,7 +244,7 @@ def write_excel_multi_sheet5(filename,dfs,sheet_names,path,output_headers):
         df = pd.DataFrame(list,columns=header)
         df.to_excel(writer, sheet_name=sheet_name,index=False)
         
-    writer._save()
+    #writer._save()
     writer.close()
     
 def connect_accdb(db_path):

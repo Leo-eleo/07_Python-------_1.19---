@@ -38,9 +38,8 @@ check_list = set()
 focus_name_list = ["Q#FOCUS","U#FOCUS","R#FOCUS"]
     
 ## priority list
-priority_list = ["", "NKN.PROCLIB", "NKNB.PROCLIB", "PROC_ANP.XDM.JCL", "PROC_USRA.PROCLIB", "BEST.PROCLIB", "SYS1.USERPROC", "SYS1.OSPROC", "ÉJÉ^ÉvÉç", "VOS.PLIB", "VOS.DSPLIB", "SYSOPN.PROCLIB","SYSJOB.PROCLIB","SYSSTC.PROCLIB","SYS1.PROCLIB","SYS2.PROCLIB","PP1.PROCLIB", "AIM1.PROCLIB", "JS.SYSJOBS", "JS.JCLIB", "JS.FXIPF.PROCLIB", "JS.TESTJCL", "D", "HULFT.FTPM.JCL", "J", "JS.AIM.SYMFOSRC", "JS.SP.JCL", "OWFT.FTPM.JCL", "P", "TSO.TEST.PROCLIB"] 
-    
-     
+priority_list = ["", "SSL.PROCLIB", "SYS1.KKR.PROCLIB", "TSSD12.JCL", "TSSD12.JCL2", "TSSD21.SNT.JCL", "TSSD21.SUBMIT.JCL", "TSSD22.HJN.JCL", "TSSENT.SUBMIT.JCL", "TSSP.HJN.JCL", "TSSP.JCL"] 
+        
 ### valid string of 5,6 of pgm screen 
 pgm_screen_valid_list = ["EW","FC","FI","FN","FW","FY","FZ"]
 

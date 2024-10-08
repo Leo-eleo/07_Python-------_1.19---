@@ -123,10 +123,10 @@ class SUB_SQLê∂ê¨_JCL_2:
 
         # ADD 20240618 yi.a.qian
         # PROC_NAME Setting
-        if JOB_SEQ == 0:
-            if STEP_PROC == "":
-                global PROC_ID
-                STEP_PROC = PROC_ID
+        # if JOB_SEQ == 0:
+        #     if STEP_PROC == "":
+        #         global PROC_ID
+        #         STEP_PROC = PROC_ID
         # ADD END
         key_list = ["LIBRARY_ID","JCL_NAME","JOB_SEQ","JOB_ID","STEP_SEQ","STEP_ID","PGM_NAME","PROC_NAME","SYSIN_PGM","SYSIN_DD","SYSIN_SEQ","SYSIN"]
         value_list = [ÉâÉCÉuÉâÉäID,ÉtÉ@ÉCÉãñº,JOB_SEQ,JOB_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,"", DD_NAME, SYSIN_SEQ,DBï∂éö(SYSIN_LINE)]
@@ -166,10 +166,10 @@ class SUB_SQLê∂ê¨_JCL_3:
         STEP_SEQ += 1
         # ADD 20240618 yi.a.qian
         # PROC_NAME Setting
-        if JOB_SEQ == 0:
-            if STEP_PROC == "":
-                # global PROC_ID
-                STEP_PROC = PROC_ID
+        # if JOB_SEQ == 0:
+        #     if STEP_PROC == "":
+        #         # global PROC_ID
+        #         STEP_PROC = PROC_ID
         # ADD END
         key_list = ["LIBRARY_ID","JCL_NAME","JOB_SEQ","JOB_ID","PROC_ID","STEP_SEQ","STEP_NAME","PGM_NAME","PROC_NAME","PARM_VAR_LIST","PARM_VALUE_LIST"]
         value_list = [ÉâÉCÉuÉâÉäID,ÉtÉ@ÉCÉãñº,JOB_SEQ, JOB_ID,PROC_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,STEP_PARM1,DBï∂éö(STEP_PARM2)]
@@ -207,10 +207,10 @@ class SUB_SQLê∂ê¨_JCL_4:
         
         # ADD 20240618 yi.a.qian
         # PROC_NAME Setting
-        if JOB_SEQ == 0:
-            if STEP_PROC == "":
-                global PROC_ID
-                STEP_PROC = PROC_ID
+        # if JOB_SEQ == 0:
+        #     if STEP_PROC == "":
+        #         global PROC_ID
+        #         STEP_PROC = PROC_ID
         # ADD END
         key_list = ["LIBRARY_ID","JCL_NAME","JOB_SEQ","JOB_ID","STEP_SEQ","STEP_NAME","PGM_NAME","PROC_NAME","SYSIN_PGM","DD_NAME","DSN","GDG","SYSIN","DISP","SYSOUT","WRITER","FORM","UNIT","SPACE_Q","DCB_RECFM","DCB_LRECL","DCB_BLKSIZE","VOL","LABEL"]
         value_list = [ÉâÉCÉuÉâÉäID,ÉtÉ@ÉCÉãñº,JOB_SEQ,JOB_ID,STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,"",DD_NAME,DD_DSN,DD_GDG + DD_AAUTOê¢ë„,DD_SYSIN,DD_DISP,DD_SYSOUT,DD_WRITER,DD_FORM,DD_UNIT,DD_SPACE,DD_RECFM,DD_LRECL,DD_BLKSIZE,DD_VOL,DD_LABEL]
@@ -254,10 +254,10 @@ class SUB_SQLê∂ê¨_JCL_5:
         CMD_SEQ = CMD_SEQ + 1
         # ADD 20240618 yi.a.qian
         # PROC_NAME Setting
-        if JOB_SEQ == 0:
-            if STEP_PROC == "":
-                global PROC_ID
-                STEP_PROC = PROC_ID
+        # if JOB_SEQ == 0:
+        #     if STEP_PROC == "":
+        #         global PROC_ID
+        #         STEP_PROC = PROC_ID
         # ADD END
         key_list = ["éëéYID","JOB_SEQ","JCL_ID","STEP_SEQ","STEP_NAME","PGM_NAME","PROC_NAME","DD_NAME","CMD_SEQ","å≥éëéYçsèÓïÒ","CMDï™óﬁ","PARM","çsCHKåãâ "]
         value_list = [ÉtÉ@ÉCÉãñº,JOB_SEQ,JOB_ID,L_STEP_SEQ,STEP_NAME,STEP_PGM,STEP_PROC,DD_NAME,CMD_SEQ,å≥éëéYçs,ï™êÕçsTYPE,åüçıçsï∂éöóÒ,çsCHK]
@@ -850,6 +850,10 @@ def analysis1_5_structure_JCL(TokenSheet2,JCLSheet,fileName,conn,cursor, ê›íËèå
                 PROC_ID = Name_fld
                 JCLï™óﬁ = "äOïîPROC"
                 DD_NAME = ""
+                # ADD 20241008 j.d.lin
+                JOB_ID = ""
+                STEP_PROC = ""
+                # ADD END
             #'åüçıóÒ = 3         'TokenSheet2Å@óÒÉ|ÉCÉìÉ^
             åüçıóÒ = äÓèÄóÒ      #   'TokenSheet2Å@óÒÉ|ÉCÉìÉ^
         elif CMD_fld == "PEND":
