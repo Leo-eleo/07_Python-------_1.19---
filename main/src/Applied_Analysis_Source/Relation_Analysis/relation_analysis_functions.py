@@ -1579,7 +1579,11 @@ def take_data_from_string(string,type,take_string="",language_type="COMMON"):
     if type == "CALL-VARIABLE":
         if comment_line_check(string,"COBOL") == -1:
             return -1
- 
+        # ADD 20241008 yi.a.qian
+        elif any([x in take_string for x in ["*", "+", "?", "(", ")"]]):
+            return -1
+        # ADD END
+
         #re_pattern = '\s*'+take_string+'\s+?PIC\s+?.+?\s+?VALUE\s+?\'\s*(?P<value_name>\S*)\s*\''
         re_pattern = '\s*'+take_string+'\s+?PIC\s+?.+?\s+?VALUE\s+?[\'\"]\s*(?P<value_name>\S*)\s*[\'\"]'
         re_pattern = re.compile(re_pattern)
@@ -1773,7 +1777,8 @@ def take_data_from_string(string,type,take_string="",language_type="COMMON"):
         search = re_pattern.search(string)    
         if search:
             s = search.group("value_name")
-            if check_string_only_number(s) == 1 or check_cobol_call_valid(s) == -1:
+            # if check_string_only_number(s) == 1 or check_cobol_call_valid(s) == -1:
+            if check_string_only_number(s) == 1:
                 return -1
             
             s = take_prefix_and_suffix(s,"\"")
