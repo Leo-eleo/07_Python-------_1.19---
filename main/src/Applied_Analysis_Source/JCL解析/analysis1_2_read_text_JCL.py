@@ -111,7 +111,7 @@ def SUB_PC”»’è_JCL():
         # UPD 20240613 yi.a.qian
         if not next_rec == "" and len(next_rec) > 3:
             third_char = next_rec[2]
-            if third_char == " ":
+            if third_char == " " or next_rec.startswith("//*") or next_rec.startswith("//-"):
                 PŒp‘± = True
             else:
                 PŒp‘± = False
