@@ -442,12 +442,14 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                                 
                 #'ステートメント分類の識別情報(JOB EXEC DDなど)がない行の処理
                 else:
+                    # 20241111 detao.wang 関電 UPD START
                     # 20240703 jiafu.luan 千葉 UPD START
-                    # if C継続:
-                    #     PARM文字列 = ""
-                    #     COMMENT文字列 = Mid(strREC, 3, 68)
-                    # elif A継続:
-                    if A継続:
+                    if C継続 and not P継続:
+                        PARM文字列 = ""
+                        COMMENT文字列 = Mid(strREC, 3, 68)
+                    elif A継続:
+                    # if A継続:
+                    # 20241111 detao.wang 関電 UPD END
                         PARM_開始桁 = 16
                         for i in range(2,16):
                             if strREC[i] != " ":
@@ -472,10 +474,12 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                         #'PARM文字列 = Mid(strREC, PARM_開始桁, 72 - PARM_開始桁)
                         
                         SUB_PC判定_JCL()
-                    elif C継続:
-                        PARM文字列 = ""
-                        COMMENT文字列 = Mid(strREC, 3, 68)
-                    # # 20240703 jiafu.luan 千葉 UPD END
+                    # 20241111 detao.wang 関電 UPD START
+                    # elif C継続:
+                    #     PARM文字列 = ""
+                    #     COMMENT文字列 = Mid(strREC, 3, 68)
+                    # # # 20240703 jiafu.luan 千葉 UPD END
+                    # 20241111 detao.wang 関電 UPD END
                     else:
                         first = -1
                         last = -1
