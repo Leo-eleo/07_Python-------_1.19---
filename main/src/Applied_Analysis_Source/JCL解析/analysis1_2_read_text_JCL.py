@@ -107,7 +107,8 @@ def SUB_PC判定_JCL():
         PARM文字列 = Mid(strREC, PARM_開始桁, PARM_終了桁 - PARM_開始桁 + 1)
 
     MSG = PARM文字列[-1]
-    if MSG == ",":
+    MSG2 = "" if len(strREC) < 72 else strREC[:72][-2]
+    if MSG == "," or MSG2 == ",":
         # UPD 20240613 yi.a.qian
         if not next_rec == "" and len(next_rec) > 3:
             third_char = next_rec[2]
