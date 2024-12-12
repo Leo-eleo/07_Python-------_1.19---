@@ -39,7 +39,7 @@ def get_ZENKAKU_str(string,HANKAKU_start,HANKAKU_len):
             num += 1
         if num == HANKAKU_len:
             return string[:i+1]
-    
+
     return string
 
 def SUB_PC判定_JCL():
@@ -47,12 +47,12 @@ def SUB_PC判定_JCL():
     # ADD 20240613 yi.a.qian
     global next_rec
     # ADD END
-    
+
     PARM_終了桁 = 71
     for i in range(PARM_開始桁,min(72,len(strREC))):
-        
+
         判定対象文字 = strREC[i]
-            
+
         if 判定対象文字 ==  "'":
             if PC判定 == "PARM":
                 if A継続:
@@ -70,16 +70,16 @@ def SUB_PC判定_JCL():
                 pass
             else:
                 if PC判定 == "PARM":
-            
+
                     PARM_終了桁 = i - 1
                     PC判定 = ""
 # '20111209 ADD
         elif 判定対象文字 ==  "":    # '移行後資産などで途中で改行が入っている場合想定
             if A継続:
-                pass           
+                pass
             else:
                 if PC判定 == "PARM":
-            
+
                     PARM_終了桁 = i - 1
                     PC判定 = ""
 # 'ADD END
@@ -91,7 +91,7 @@ def SUB_PC判定_JCL():
             elif PC判定 == "未処理":
                 PC判定 = "PARM"
                 PARM_開始桁 = i
-            
+
 
     # 'PARM部
     if A継続:
@@ -99,13 +99,13 @@ def SUB_PC判定_JCL():
         #PARM文字列 = Mid(strREC, PARM_開始桁, 72 - PARM_開始桁)#+1)
         PARM文字列 = Mid(strREC, PARM_開始桁, 72 - PARM_開始桁)
 #'UPD END
-    
+
     else:
         # 'if PARM_開始桁 = PARM_終了桁:
         # '    PARM文字列 = ""
         # 'else:
         PARM文字列 = Mid(strREC, PARM_開始桁, PARM_終了桁 - PARM_開始桁 + 1)
-    
+
     MSG = PARM文字列[-1]
     if MSG == ",":
         # UPD 20240613 yi.a.qian
@@ -120,7 +120,7 @@ def SUB_PC判定_JCL():
         # UPD END
     else:
         P継続 = False
-    
+
     # 'COMEENT部
     if PC判定 == "未処理" or PC判定 == "PARM" or PC判定 == "":
         COMMENT文字列 = ""
@@ -136,14 +136,14 @@ def remove_inline_comment(s: str) -> str:
 # ADD END
 
 def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
-    
+
     global DLM_flg,最終行_flg,解析中止_flg, NET行継続,A継続,C継続,P継続,IF継続,strREC
     global PC判定,PARM_開始桁,PARM_終了桁,COM_開始桁,COMMENT文字列,MSG,PARM文字列
     # ADD 20240613 yi.a.qian
     global next_rec
     # ADD END
     TmpSheet = []
-  
+
     DLM_flg = False
     最終行_flg = False
     解析中止_flg = False
@@ -154,17 +154,17 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
     IF継続 = False
     PARM文字列 = ""
     COMMENT文字列 = ""
-    
+
     CMD分類 = ""
     GYO = 2
-    
+
     with open(Filename,errors="ignore") as TS:
 
         # UPD 20240613 yi.a.qian
         lines = TS.readlines()
         for rec_index, strREC in enumerate(lines):
         # UPD END
-            
+
             # UPD 20240619 yi.a.qian
             # strREC = strREC.replace("\n","")
             strREC = remove_inline_comment(strREC.replace("\n",""))
@@ -188,11 +188,11 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
             # '            GYO = GYO + 1
             # '            TmpSheet_GYO[2] = strREC
             # '        End if
-            
+
             # '行情報判定
             if 解析中止_flg:
                 JCL行分類 = "終了行"
-            
+
                 #    '再度「JOB文」がきたら再解析開始 20140724 H.Takei
                 # UPD 20240613 yi.a.qian
                 if strREC.startswith("//") and strREC[2] != "*" and " JOB " in strREC:
@@ -201,14 +201,14 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                     解析中止_flg = False
                     最終行_flg = False
                     JCL行分類 = "通常行"
-            
+
             elif NET行継続:
                 JCL行分類 = "NET行"
                 if Trim(Mid(strREC, 3, 68)).endswith(","):
                     pass
                 else:
                     NET行継続 = False
-                    
+
             # 'elif 最終行_flg:
             elif strREC.startswith("//*NET "):   #'富士通 DLM対応
                 JCL行分類 = "NET行"
@@ -223,7 +223,7 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
             # UPD END
             elif strREC.startswith("//*") or strREC.startswith("//-"):  #'"//-"は福山通運用暫定対応（終了行の後にある場合がある）
                 JCL行分類 = "ｺﾒﾝﾄ行"
-            
+
             # UPD 20240613 yi.a.qian
             elif strREC.startswith("//"):
             # elif strREC.startswith("//") or strREC.startswith("/\\"):
@@ -249,7 +249,7 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                     JCL行分類 = "終了行"
                 else:
                     JCL行分類 = "区切行"
-                    
+
             elif DLM_flg and strREC.startswith(DLM文字): #'DLMで指定した区切行
                 JCL行分類 = "区切行"
                 DLM_flg = False                              #    'DLM指定解除
@@ -260,9 +260,9 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                 else:
                     JCL行分類 = "SYSIN行"
 
-                
+
             TmpSheet_GYO[1] = JCL行分類
-            
+
             #'区切文字判定
             if JCL行分類 == "通常行" and  "DLM='" in strREC:
                 DLM_flg = True
@@ -271,20 +271,20 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                 DLM_flg = True
                 DLM文字 = Mid(strREC, strREC.find("DLM=") + 4, 2)
             #'注：アポストロフィー自体またはアンパサンドは未対応
-            
+
             #'ステートメント分類情報判定
             継続行_flg = True      # 'ステートメント分類の識別情報(JOB EXEC DDなど)が検索されない場合
-            
+
             #'20111209 ADD
             strREC_判定桁 = strREC.find("'") + 1
             if strREC_判定桁 > 0:
                 strREC_判定用 = strREC[:strREC_判定桁]
             else:
-                #strREC_判定用 = strREC.startswith             
+                #strREC_判定用 = strREC.startswith
                 strREC_判定用 = strREC[:30]  # '右側コメント領域に「 JOB 」等のキーワードがある場合があり検索範囲を限定
-            
+
 #'ADD END
-            
+
             if JCL行分類 == "通常行":
                 # ステートメント:JOB
                 # フィールド    ://jobname   JOB   [parameter   [comments]]
@@ -344,7 +344,7 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                     PARM文字列 = Mid(strREC, PARM_開始桁, 72 - PARM_開始桁)
                     継続行_flg = False
 #'ADD END
-                
+
 #'20111215 ADD takei
                 # ステートメント:IF/THEN/ELSE/ENDIF
                 # フィールド    ://name IF [relational expression] THEN  [comments]
@@ -359,14 +359,14 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                     if " THEN" in strREC:                   #    'THENの場合「strREC_判定用」ではなく「strREC」で検索
                         IF継続 = False
                         #'PARM_終了桁 = ":")
-                        PARM_終了桁 = strREC.find(" THEN") 
+                        PARM_終了桁 = strREC.find(" THEN")
                         PARM文字列 = "'" + Mid(strREC, PARM_開始桁, PARM_終了桁 - PARM_開始桁 - 1) + "'THEN"  #'適当にｱﾎﾟｽﾄﾛﾌｨ追加
                         COMMENT文字列 = strREC[PARM_終了桁 + 5:72]   # '桁数は自信なし。。
                     else:
                         IF継続 = True
                         PARM文字列 = "'" + strREC[PARM_開始桁:72]  # '桁数は自信なし。。
                         COMMENT文字列 = ""
-                        
+
                 elif " ELSE " in strREC:
                     CMD分類_開始桁 = strREC.find(" ELSE ")
                     CMD分類 = "ELSE"
@@ -389,7 +389,7 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                         COMMENT文字列 = "" #'よくわからないので仮
                     #'継続行_flg = False                                  '"IF"文は通常のPC判定は行わない
 #'ADD END
-                
+
                 # ステートメント:Null
                 # フィールド    ://
                 elif Mid(strREC, 2, 69) == EndLineString:
@@ -398,15 +398,15 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                 #'対応待ち
                 # ステートメント:COMMAND
                 # フィールド    ://[name]  COMMAND ‘command command-operand’  [comments]
-                
+
                 # ステートメント:CNTL
                 # フィールド    ://label   CNTL   [*  comments]
                 # ステートメント:ENDCNTL
                 # フィールド    ://[label]   ENDCNTL   [comments]
-                
+
                 # ステートメント:EXPORT
                 # フィールド    ://[label]   EXPORT   [comments]
-                
+
                 # ステートメント:OUTPUT JCL
                 # フィールド    ://name   OUTPUT   parameter   [comments]
 
@@ -418,17 +418,17 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
 
                 # ステートメント:XMIT
                 # フィールド    ://[name]   XMIT   parameter[,parameter] [comments]
-                
+
             # 'NAME行情報セット
             if JCL行分類 == "通常行" and 継続行_flg == False and CMD分類 != "ヌル":
                 TmpSheet_GYO[2] = Mid(strREC, 2, CMD分類_開始桁 - 3 + 1).replace(" ", "")
-            
+
             #'CMD行情報セット
             if JCL行分類 == "通常行":
                 TmpSheet_GYO[3] = CMD分類 # '上記以外の場合は前行の情報が引き継がれる
             else:
                 TmpSheet_GYO[3] = ""
-            
+
             #'PARM情報&COMMENT情報識別
             if JCL行分類 == "通常行" and CMD分類 != "ヌル":
                 #'ステートメント分類の識別情報(JOB EXEC DDなど)がある行の処理
@@ -439,7 +439,7 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                     PC判定 = "未処理"  #'PARM部orコメント部かを識別する
                 # 'PARM部とコメント分に分割
                     SUB_PC判定_JCL()
-                                
+
                 #'ステートメント分類の識別情報(JOB EXEC DDなど)がない行の処理
                 else:
                     # 20241111 detao.wang 関電 UPD START
@@ -456,9 +456,9 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                                 PARM_開始桁 = min(PARM_開始桁,i)
                         # 'PARM文字列 = Mid(strREC, PARM_開始桁, 72 - PARM_開始桁)
                         PC判定 = "PARM"
-                        
+
                         SUB_PC判定_JCL()
-                    
+
                     elif P継続:
 
                         PC判定 = "未処理"
@@ -470,9 +470,9 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                                 break
                         if PARM_開始桁 == 2:
                             PARM_開始桁 = 72
-                            
+
                         #'PARM文字列 = Mid(strREC, PARM_開始桁, 72 - PARM_開始桁)
-                        
+
                         SUB_PC判定_JCL()
                     # 20241111 detao.wang 関電 UPD START
                     # elif C継続:
@@ -488,7 +488,7 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                                 if first == -1:
                                     first = i
                                 last = i
-                        
+
                         PARM文字列 = Mid(strREC,first,last-first+1)
                         COMMENT文字列 = ""
                         CMD分類 = ""
@@ -497,15 +497,15 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                         #     PARM文字列 = ""
                         #     COMMENT文字列 = ""
                         MSG = "想定外のパターン"
-                
-                
+
+
 # 'ヌル行
             elif JCL行分類 == "通常行" and CMD分類 == "ヌル":
                 PARM文字列 = "ヌル"
                 COMMENT文字列 = ""
             #'通常行以外
             else:
-                
+
                 if JCL行分類 == "ｺﾒﾝﾄ行":
                     PARM文字列 = ""
                     COMMENT文字列 = Mid(strREC, 0, 71) #' 「=」で始まる文字列をセルにセットできないので
@@ -542,15 +542,15 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                 TmpSheet_GYO[6] = "A継続"
             if P継続:
                 TmpSheet_GYO[6] = "P継続"
-            
-            
-            
+
+
+
             # '継続行情報セット
             if len(strREC) > 71 and get_ZENKAKU_str(strREC,71,1) != " ":  # '72文字目まで存在しない場合は継続行としない
                 C継続 = True
             else:
                 C継続 = False
-                
+
             TmpSheet_GYO[7] = get_ZENKAKU_str(strREC,71,1)
             # '制御情報セット
             TmpSheet_GYO[8] = Mid(strREC, 72, 8)
@@ -558,14 +558,14 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
             TmpSheet_GYO[9] = GYO - 1
             # '元資産行情報セット
             TmpSheet_GYO[10] = strREC
-            
+
             # 'A-AUTO世代管理情報セット                               '2020/4/13 ADD
             if AAUTO世代情報管理 == "①A-AUTO世代のまま出力":
                 TmpSheet_GYO[11] = Trim(Mid(strREC, 70, 1))
-            
-        
+
+
             TmpSheet.append(TmpSheet_GYO)
             GYO += 1
-            
-            
+
+
     return TmpSheet
