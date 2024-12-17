@@ -21,18 +21,18 @@ def checkSub(types, callback, *subs):
             paths.append(sub)
         elif types[index] == "text":
             if sub.GetValue() == '':
-                showDialog("『" + sub.GetLabel() + "』を入力してください")
+                showDialog("Type in 「" + sub.GetLabel() + "」 here.")
                 return
             paths.append(sub.GetValue())
         elif types[index] == "option":
             paths.append(sub)
         else:
             if sub.GetPath() == '':
-                showDialog("『" + sub.GetLabel() + "』を入力してください")
+                showDialog("「" + sub.GetLabel() + " 」を入力してください／Type in here")
                 return
             else:
                 if not checkStyle(types[index], sub.GetPath()):
-                    showDialog("『" + sub.GetLabel() + "』" + "ファイルの拡張子が正しくない")
+                    showDialog("「" + sub.GetLabel() + "」" + "ファイルの拡張子が正しくない／File extension is incorrect")
                     return
                 else:
                     paths.append(sub.GetPath())
@@ -51,7 +51,7 @@ def checkStyle(style, path):
 
 
 def showDialog(message):
-    stone = wx.MessageDialog(None, message, "提示", wx.YES_DEFAULT | wx.ICON_QUESTION)
+    stone = wx.MessageDialog(None, message, "提示／Error Message", wx.YES_DEFAULT | wx.ICON_QUESTION)
     if stone.ShowModal() == wx.ID_YES:
         stone.Destroy()
 

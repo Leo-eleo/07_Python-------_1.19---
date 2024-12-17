@@ -76,7 +76,7 @@ def analysis1_3_lexical_JCL(TmpSheet):
                     o—Í—ñ = o—Í—ñ + 1
                     if ”»’è‘ÎÛ•¶š == "'":
                         ”»’è‘ÎÛ•¶š_from += 1
-                        ‘ÎÛ•¶š” -= 1
+                        ‘ÎÛ•¶š” -= 2
                         
                     TokenSheet_GYO.append(Mid(PARM_fld, ”»’è‘ÎÛ•¶š_from, ‘ÎÛ•¶š”))
                     AŒp‘± = False  #  '20111207 ADD

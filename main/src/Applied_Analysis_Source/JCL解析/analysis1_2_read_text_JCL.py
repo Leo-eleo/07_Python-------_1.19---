@@ -303,6 +303,11 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
                     CMD分類 = "DD"
                     PARM_開始桁 = CMD分類_開始桁 + 4
                     継続行_flg = False
+                elif  " EXPAND " in strREC_判定用:
+                    CMD分類_開始桁 = strREC.find(" EXPAND ")
+                    CMD分類 = "DD"
+                    PARM_開始桁 = CMD分類_開始桁 + 8
+                    継続行_flg = False
                 # ステートメント:EXEC
                 # フィールド    ://[stepname]   EXEC   parameter   [comments]
                 elif " EXEC " in strREC_判定用:
@@ -547,10 +552,11 @@ def analysis1_2_read_text_JCL(Filename,AAUTO世代情報管理):
 
 
             # '継続行情報セット
-            if len(strREC) > 71 and get_ZENKAKU_str(strREC,71,1) != " ":  # '72文字目まで存在しない場合は継続行としない
-                C継続 = True
-            else:
-                C継続 = False
+            if not JCL行分類 == "ｺﾒﾝﾄ行":
+                if len(strREC) > 71 and get_ZENKAKU_str(strREC,71,1) != " ":  # '72文字目まで存在しない場合は継続行としない
+                    C継続 = True
+                else:
+                    C継続 = False
 
             TmpSheet_GYO[7] = get_ZENKAKU_str(strREC,71,1)
             # '制御情報セット
