@@ -449,7 +449,7 @@ def IsNumeric(parm_str):
     
     return True
 
-
+# 二次元配列内の文字データから拡張子を除去する
 def take_all_extensions(lis):
     if lis == []:
         return lis
@@ -458,6 +458,19 @@ def take_all_extensions(lis):
     for i in range(len(lis)):
         for j in range(m):
             if type(lis[i][j]) == str:
+                lis[i][j] = take_extensions(lis[i][j])
+    return lis
+
+# take_all_extensionsの対象外カラム名指定版
+exclusion_columns = ["DSN"]
+def exclude_take_all_extensions(lis, keys):
+    if lis == []:
+        return lis
+    
+    m = max(4,len(lis[0]))
+    for i in range(len(lis)):
+        for j in range(m):
+            if type(lis[i][j]) == str and keys[j] not in exclusion_columns:
                 lis[i][j] = take_extensions(lis[i][j])
     return lis
 

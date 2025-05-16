@@ -58,7 +58,7 @@ def main(output_path,input_path,IsDelete):
             if "AUTO_KEY" in keys:
                 keys.remove("AUTO_KEY")
             values = df[keys].values.tolist()
-            values = take_all_extensions(values)
+            values = exclude_take_all_extensions(values, keys)
             
             for value in values:
                 sql,v = make_insert_sql(table_out,value,keys)
