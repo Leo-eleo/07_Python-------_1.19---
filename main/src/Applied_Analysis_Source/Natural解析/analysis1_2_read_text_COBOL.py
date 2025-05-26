@@ -13,6 +13,16 @@ from Common_analysis import *
 言語_判定 = "COBOL"
 PATTERN_COMMENT = re.compile(r"^\s*\*")
 
+# 追加のコメント行判定パターン
+comment_patterns = [
+    "COPY *",
+    "LOCAL*",
+    "GLOB *",
+    "PARAM*",
+    "MAP  *",
+    "INCL *"
+]
+
 
 def comment_line_check(line):
     if PATTERN_COMMENT.match(line[4:]):
@@ -77,7 +87,15 @@ def analysis1_2_read_text_COBOL(Filename):
             # '            TmpSheet_GYO[2] = strREC
             # '        End if
 
-            制御文字 = Mid(strREC, 6, 1)
+            # 行スキップ条件の追加
+            if strREC == "\x1a":
+                continue
+
+            # 制御文字判定
+            if strREC[:4].isdigit():  # 先頭4桁が数字の場合、5桁目以降のスペース以外の先頭1桁
+                制御文字 = strREC[5:].replace(" ", "")[0]
+            else:  # 先頭4桁が数字以外の場合、1桁目以降のスペース以外の先頭1桁
+                制御文字 = strREC[1:].replace(" ", "")[0]
 
             if 制御文字 == "*" or 制御文字 == "/":
                 COBOL行分類 = "ｺﾒﾝﾄ行"
@@ -85,8 +103,12 @@ def analysis1_2_read_text_COBOL(Filename):
             #     COBOL行分類 = "ﾃﾞﾊﾞｯｸﾞ行"
             elif 制御文字 == "-":
                 COBOL行分類 = "継続行"
-            elif Mid(strREC, 6, min(66, len(strREC))).replace(" ", "") == "":
+            elif strREC[:4].isdigit() and strREC[5:].replace(" ", "") == "":  # 先頭4桁が数字の場合、5桁目以降がフルスペース
                 COBOL行分類 = "空白行"
+            elif not strREC[:4].isdigit() and strREC[1:].replace(" ", "") == "":  # 先頭4桁が数字以外の場合、1桁目以降がフルスペース
+                COBOL行分類 = "空白行"
+            elif any(strREC[:6] == pattern for pattern in comment_patterns):  # 追加のコメント行判定
+                COBOL行分類 = "ｺﾒﾝﾄ行"
             else:
                 COBOL行分類 = "通常行"
 
@@ -142,17 +164,10 @@ def analysis1_2_read_text_COBOL(Filename):
 
             # '2013/03/08　継続行対応 TO
             elif COBOL行分類 == "通常行":
-                if Mid(strREC, 7, 4).replace(" ", "") == "":
-                    if Mid(strREC, 11, 1) == "'" or Mid(strREC, 11, 1) == "=":
-                        # '先頭がカンマの場合 " "　を付与（暫定対応）
-                        # '先頭が"="の場合 " "　を付与（20120117追加）
-                        TmpSheet_GYO[4] = " " + get_ZENKAKU_str(
-                            strREC, 11, len(strREC))
-                    else:
-                        TmpSheet_GYO[4] = get_ZENKAKU_str(
-                            strREC, 11, len(strREC))
-                else:
-                    TmpSheet_GYO[3] = get_ZENKAKU_str(strREC, 6, len(strREC))
+                if strREC[:4].isdigit():  # 先頭4桁が数字の場合、5桁目以降の内容
+                    TmpSheet_GYO[4] = get_ZENKAKU_str(strREC, 5, len(strREC))
+                else:  # 先頭4桁が数字でない場合は、フルで正常行内容
+                    TmpSheet_GYO[4] = get_ZENKAKU_str(strREC, 0, len(strREC))
             else:
                 pass
 

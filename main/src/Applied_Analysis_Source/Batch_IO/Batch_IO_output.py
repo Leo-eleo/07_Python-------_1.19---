@@ -10,6 +10,8 @@ from Common_analysis import *
 from Applied_IO_Info import Applied_IO_Info_main
 from Test_Step_Import import test_step_import
 
+import warnings
+
 dsn_dic = {}
 io_header = ["TEST_ID","DSN","日本語名称(DSN)","データ種別","受領入力","受領照合"]
 test_io_info_all = []
@@ -33,23 +35,36 @@ def make_output_file(io_list,title,test_id,keys):
     data_idx = keys.index("データ種別2")
 #'UPD END
     test_io_info = []
-    for list_now in io_list:
+    
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+#    for list_now in io_list:
+    
+    # ユニーク化処理の追加
+    unique_io_list = [list(t) for t in set(tuple(item) for item in io_list)]
+    
+    for list_now in unique_io_list:
+# UPD END
         if "入力" in list_now[receive_idx] or "照合" in list_now[receive_idx]:
             dsn = list_now[dsn_idx]
             data = list_now[data_idx]
             dsn_japanese = dsn_dic.get(dsn,"")
             receive_input = ""
             receive_collation = ""
+            
             if "入力" in list_now[receive_idx]:
                 receive_input = "●"
+            
             if "照合" in list_now[receive_idx]:
                 receive_collation = "●"
-                
+            
             io_info = [test_id,dsn,dsn_japanese,data,receive_input,receive_collation]
             test_io_info.append(io_info)
             test_io_info_all.append(io_info)
 
-    write_excel_multi_sheet3(test_id + ".xlsx",[io_list,test_io_info],["応用_入出力情報出力","テストIO情報"],title,[keys,io_header])
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+#    write_excel_multi_sheet3(test_id + ".xlsx",[io_list,test_io_info],["応用_入出力情報出力","テストIO情報"],title,[keys,io_header])
+    write_excel_multi_sheet3(test_id + ".xlsx",[unique_io_list,test_io_info],["応用_入出力情報出力","テストIO情報"],title,[keys,io_header])
+# UPD END
     
     return 
 
@@ -58,8 +73,13 @@ def main(db_path,excel_path,title):
     global test_io_info_all
     if os.path.isdir(title) == False:
         os.makedirs(title)
-        
-        
+    
+#'20250202 ADD qian.e.wang 長野県信テストIO出力対応
+    # 特定の警告メッセージを無視
+    warnings.filterwarnings("ignore", message="pandas only supports SQLAlchemy connectable")
+    warnings.filterwarnings("ignore", message="Setting an item of incompatible dtype is deprecated and will raise an error in a future version of pandas.")
+# ADD END
+    
     test_step_import.analysis1_main(db_path,title)
     Applied_IO_Info_main.main(db_path,title)
     
@@ -78,8 +98,38 @@ def main(db_path,excel_path,title):
     dsn_df.fillna("",inplace=True)
     dsn_dic = {dsn:name for dsn,name in zip(dsn_df["データセット名"],dsn_df["日本語名称"])}
     
-    io_out_path = os.path.join(title,"応用入出力解析.xlsx")
-    io_df = pd.read_excel(io_out_path,sheet_name="応用入出力")
+#'20250129 UPD qian.e.wang 長野県信テストIO出力対応
+    # io_out_path = os.path.join(title,"応用入出力解析.xlsx")
+    
+    # io_df = pd.read_excel(io_out_path,sheet_name="応用入出力")
+    # チャンクごとに異なるシート名で読み込み
+    all_chunks = []
+    i=0
+    
+    while True:
+        try:
+            # チャンクごとの出力ファイル名を生成
+            io_out_path = os.path.join(title, f'応用入出力解析_{i+1}.xlsx')
+            
+            # ファイルが存在する場合のみ読み込み
+            if os.path.exists(io_out_path):
+                chunk=pd.read_excel(io_out_path,sheet_name=f'応用入出力')
+                all_chunks.append(chunk)
+                i+=1
+            else:
+                break
+        
+        except ValueError:
+            break
+    
+    # 空リストのチェック
+    if not all_chunks:
+        print("No data to concatenate for all_chunks")
+        return
+    
+    io_df=pd.concat(all_chunks) 
+# UPD END
+    
     io_df.fillna("",inplace=True)
     keys = io_df.columns.tolist()
     
@@ -87,12 +137,18 @@ def main(db_path,excel_path,title):
         keys = keys[:keys.index("JCL_MBR")]
     else:
         print("データが想定された形式ではありません。")
+    
+#'20250202 ADD qian.e.wang 長野県信テストIO出力対応
+    unique_io_set = set()
+# ADD END
+    
     io_list = []
     last = ""
     for i in range(len(io_df)):
         data = io_df.iloc[i]
         test_id_now = data["TEST_ID"]
         list_now = [data[key] for key in keys]
+        
         if test_id_now != last:
             
             if last not in starting_point_to_out_folder_dic:
@@ -112,6 +168,7 @@ def main(db_path,excel_path,title):
                     
             
             io_list = []
+            
         io_list.append(list_now)
         last = test_id_now
     
@@ -128,8 +185,14 @@ def main(db_path,excel_path,title):
             os.makedirs(out_title)
             
         make_output_file(io_list,out_title,last,keys)
-        
-    write_excel_multi_sheet3("テストIO情報_マージ.xlsx",[test_io_info_all],["テストIO情報"],title,[io_header])
+    
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+    # ユニーク化処理の追加
+    unique_io_info_all = [list(t) for t in set(tuple(item) for item in test_io_info_all)]
+    
+#    write_excel_multi_sheet3("テストIO情報_マージ.xlsx",[test_io_info_all],["テストIO情報"],title,[io_header])
+    write_excel_multi_sheet3("テストIO情報_マージ.xlsx",[unique_io_info_all],["テストIO情報"],title,[io_header])
+# UPD END
     
 if __name__ == "__main__":
     main(sys.argv[1],sys.argv[2],sys.argv[3])

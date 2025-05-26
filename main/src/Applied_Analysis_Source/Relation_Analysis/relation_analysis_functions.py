@@ -38,8 +38,9 @@ check_list = set()
 focus_name_list = ["Q#FOCUS","U#FOCUS","R#FOCUS"]
     
 ## priority list
-priority_list = ["", "SSL.PROCLIB", "SYS1.KKR.PROCLIB", "TSSD12.JCL", "TSSD12.JCL2", "TSSD21.SNT.JCL", "TSSD21.SUBMIT.JCL", "TSSD22.HJN.JCL", "TSSENT.SUBMIT.JCL", "TSSP.HJN.JCL", "TSSP.JCL"] 
-        
+priority_list = ["", "SYS1.PROCLIB", "SYS1.IBM.PROCLIB", "SYS1.IOE.SIOEPROC", "SYS1.OSPROC", "SYS1.USERPROC", "BEST.PROCLIB", "$IMS.PROCLIB", "COM_PROCLIB", "SI95_SYS1_PROCLIB", "SI95_SYS1_USER_PROCLIB", "SI77_ISPF_BANK_PROCLIB", "SI77_SYS1_PROCLIB", "SI77_SYS1_USER_PROCLIB", "SI77_SYS2_PROCLIB", "NKN.PROCLIB", "NKNB.PROCLIB", "ANP.XDM.JCL", "USRA.PROCLIB", "SYS1.OSPROC", "カタプロ", "VOS.PLIB", "VOS.DSPLIB", "SYSOPN.PROCLIB","SYSJOB.PROCLIB","SYSSTC.PROCLIB","SYS2.PROCLIB","PP1.PROCLIB", "AIM1.PROCLIB", "JS.SYSJOBS", "JS.JCLIB", "JS.FXIPF.PROCLIB", "JS.TESTJCL", "D", "HULFT.FTPM.JCL", "J", "JS.AIM.SYMFOSRC", "JS.SP.JCL", "OWFT.FTPM.JCL", "P", "TSO.TEST.PROCLIB", "PJI2.ISPPO.REPLI.ATLS.PROCLIB", "PJI2.ISPPO.REPLI.NPLN.PROCLIB", "PJI2.ISPPO.REPLI.TOMS.PROCLIB", "SSL.PROCLIB", "SYS1.KKR.PROCLIB", "TSSD12.JCL", "TSSD12.JCL2", "TSSD21.SNT.JCL", "TSSD21.SUBMIT.JCL", "TSSD22.HJN.JCL", "TSSDENT.SUBMIT.JCL", "TSSP.HJN.JCL", "TSSP.JCL"] 
+    
+     
 ### valid string of 5,6 of pgm screen 
 pgm_screen_valid_list = ["EW","FC","FI","FN","FW","FY","FZ"]
 
@@ -89,7 +90,7 @@ def check_priority_number(library_name):
     """return priority of library number
 
     Args:
-        library_name [string]: Library name like "NKN.PROCLIB", "NKNB.PROCLIB", "PROC_ANP.XDM.JCL", "PROC_USRA.PROCLIB", "BEST.PROCLIB", "SYS1.USERPROC", "SYS1.OSPROC", "カタプロ", "VOS.PLIB", "VOS.DSPLIB", "SYSOPN.PROCLIB","SYSJOB.PROCLIB","SYSSTC.PROCLIB","SYS1.PROCLIB","SYS2.PROCLIB","PP1.PROCLIB", "AIM1.PROCLIB", "JS.SYSJOBS", "JS.JCLIB", "JS.FXIPF.PROCLIB", "JS.TESTJCL", "D", "HULFT.FTPM.JCL", "J", "JS.AIM.SYMFOSRC", "JS.SP.JCL", "OWFT.FTPM.JCL", "P", "TSO.TEST.PROCLIB"
+        library_name [string]: Library name like  "SYS1.PROCLIB", "SYS1.IBM.PROCLIB", "SYS1.IOE.SIOEPROC", "SYS1.OSPROC", "SYS1.USERPROC", "BEST.PROCLIB", "$IMS.PROCLIB", "COM_PROCLIB", "SI95_SYS1_PROCLIB", "SI95_SYS1_USER_PROCLIB", "SI77_ISPF_BANK_PROCLIB", "SI77_SYS1_PROCLIB", "SI77_SYS1_USER_PROCLIB", "SI77_SYS2_PROCLIB", "NKN.PROCLIB", "NKNB.PROCLIB", "ANP.XDM.JCL", "USRA.PROCLIB", "SYS1.OSPROC", "カタプロ", "VOS.PLIB", "VOS.DSPLIB", "SYSOPN.PROCLIB","SYSJOB.PROCLIB","SYSSTC.PROCLIB","SYS2.PROCLIB","PP1.PROCLIB", "AIM1.PROCLIB", "JS.SYSJOBS", "JS.JCLIB", "JS.FXIPF.PROCLIB", "JS.TESTJCL", "D", "HULFT.FTPM.JCL", "J", "JS.AIM.SYMFOSRC", "JS.SP.JCL", "OWFT.FTPM.JCL", "P", "TSO.TEST.PROCLIB", "PJI2.ISPPO.REPLI.ATLS.PROCLIB", "PJI2.ISPPO.REPLI.NPLN.PROCLIB", "PJI2.ISPPO.REPLI.TOMS.PROCLIB", "SSL.PROCLIB", "SYS1.KKR.PROCLIB", "TSSD12.JCL", "TSSD12.JCL2", "TSSD21.SNT.JCL", "TSSD21.SUBMIT.JCL", "TSSD22.HJN.JCL", "TSSDENT.SUBMIT.JCL", "TSSP.HJN.JCL", "TSSP.JCL"
 
     Returns:
         int : return priority number 0 - 5 (o is high priority)
@@ -547,7 +548,7 @@ def update_internal_proc_list(internal_proc_list):
     
     for jcl_name,member in zip(internal_proc_list["JCL名"],internal_proc_list["PROC_ID"]):
         jcl_name = take_extensions(jcl_name)
-        member = member.replace("\\","$")
+        member = str(member).replace("\\","$")
         internal_proc_dic[(jcl_name,member)] = 1
         jcl_to_internal_proc_dic[jcl_name] = member
         

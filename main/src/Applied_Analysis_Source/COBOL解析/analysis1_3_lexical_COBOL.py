@@ -296,8 +296,20 @@ def analysis1_3_lexical_COBOL(TmpSheet):
                             if i2 >= len(CMD_fld) or 分離文字判定_COBOL(Mid(CMD_fld, i2, 1), Mid(CMD_fld, i2 + 1, 1), Mid(CMD_fld, i2 + 2, 1)) == True:
                                 break
                             
-                
+# '2025/1/30 UPD 東洋アルミ解析不能対応 qian.e.wang
+                        # WHEN または THEN キーワードが検出された場合、次の出力行とする
+                        # if Mid(CMD_fld, i, 4) == "WHEN" or Mid(CMD_fld, i, 4) == "THEN":
+                        #     TokenSheet.append(TokenSheet_GYO)  # これまでの内容を追加
+                        #     TokenSheet_GYO = [""]*5  # 新しい命令を始めるためにリセット
+                        #     TokenSheet_GYO[1] = TmpSheet_GYO[7]
+                        #     TokenSheet_GYO[2] = COBOL行分類
+                        #     TokenSheet_GYO[3] = COBOL領域分類
+                        #     TokenSheet_GYO[4] = KEY_STR
+                        #     TokenSheet_GYO.append(Mid(CMD_fld, i, 4))
+                        #     i += 4
                         if i2 >= len(CMD_fld):
+                        # elif i2 >= len(CMD_fld):
+# UPD END
                             判定対象文字_to = 80
                             i = 80 #'後続検索終了
                             対象文字数 = 判定対象文字_to - 判定対象文字_from + 1
@@ -314,6 +326,7 @@ def analysis1_3_lexical_COBOL(TmpSheet):
                             # 'デバック
                             # 'Dim tmp_str As String
                             # 'tmp_str = TokenSheet_GYO[出力列]
+
     TokenSheet.append(TokenSheet_GYO)        
     
     return TokenSheet

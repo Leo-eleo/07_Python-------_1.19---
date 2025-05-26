@@ -53,7 +53,7 @@ def main(db_path,title,folder_Schema_path,ped_file_path):
 
 
     analysis1_PED2_analysis(conn,cursor,ped_file_path)
-    print("PED’è‹`‰ğÍŠ®—¹", time.time()-start)
+    print("PSB’è‹`‰ğÍŠ®—¹", time.time()-start)
     
     exit()
     ActSheet_all = analysis4_JCL_DAM2(conn,cursor)

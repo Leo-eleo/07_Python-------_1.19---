@@ -581,6 +581,8 @@ def analysis1_5_structure_COBOL(TokenSheet2,CobolSheet,fileName,db_path, İ’èğŒ
         COBOL—Ìˆæ•ª—Ş = TokenSheet2_GYO[3]
         COBOLŠK‘wî•ñ = TokenSheet2_GYO[4]
         COBOL•ªŠò”»’è = TokenSheet2_GYO[5]
+        #@ƒfƒoƒbƒO—pƒƒbƒZ[ƒW
+        # print("DEBUGî•ñF",ƒtƒ@ƒCƒ‹–¼,Œ³‘Ys,)
         # print(TokenSheet2_GYO)
         while True:
         
@@ -609,7 +611,9 @@ def analysis1_5_structure_COBOL(TokenSheet2,CobolSheet,fileName,db_path, İ’èğŒ
                 COBOLŠK‘wî•ñ = TokenSheet2_GYO[4]
                 COBOL•ªŠò”»’è = TokenSheet2_GYO[5]
   
-                
+
+            #@ƒfƒoƒbƒO—pƒƒbƒZ[ƒW
+            #@print("DEBUGî•ñ(ŒŸõs•¶š—ñ)F",ŒŸõs•¶š—ñ)
 
             # 'sƒŒƒxƒ‹‚Ìˆ—‚Å‚ ‚é‚ªs‰ÁZˆ—‚ª’¼‘O‚ÅÀ{‚³‚ê‚Ä‚¨‚è‚±‚±‚Ås‚¤•K—v‚ª‚ ‚é
             # 'šƒRƒ}ƒ“ƒhî•ñİ’èiÚ×‰»‚Ì—]’n‚ ‚èj
@@ -761,6 +765,10 @@ def analysis1_5_structure_COBOL(TokenSheet2,CobolSheet,fileName,db_path, İ’èğŒ
                     # 'ƒ`ƒFƒbƒNŒ‹‰Ê
                     if hit_flg:
                         parm_hit = True
+                        # ADD START wangqian AFLAC‘Î‰
+                        if CobolSheet[PARMs][4] == "":
+                            CobolSheet[PARMs][4] = 0
+                        # ADD END
                         CobolSheet[PARMs][4] = CobolSheet[PARMs][4] + 1  # 'İ’è’lƒJƒEƒ“ƒgƒAƒbƒv
                         #'•ªÍsTYPE = CobolSheet[PARMs][6]
                     

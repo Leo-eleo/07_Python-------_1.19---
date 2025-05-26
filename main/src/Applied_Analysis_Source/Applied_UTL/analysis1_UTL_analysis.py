@@ -49,6 +49,7 @@ LOADŒp‘± = False
 UNLOADŒp‘± = False
 UTACHŒp‘± = False
 #'20240215 ADD qian.e.wang
+ADARUN3VŒp‘± = False
 JYAADPŒp‘± = False
 ADMŒp‘± = False
 #'ADD END
@@ -335,11 +336,16 @@ class ‰—p_ŒÚ‹q•Ê_JCL_PGM_DSN:
             self.all_list[index][self.key_to_index["SYSIN_PGM"]] = ”»’èPGM
             self.all_list[index][self.key_to_index["©“®XVFLG"]] = DB©“®“o˜^PARM  
             
-        for i,v in enumerate(self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ)]):
-            pgm,dd = v
-            self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ)][i][0] = ”»’èPGM
-            self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ,pgm,dd)] = 0
-            self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ,”»’èPGM,dd)] = 1
+        for i,v in enumerate(str(self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ)])):
+            #pgm,dd = v
+            #self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ)][i][0] = ”»’èPGM
+            #self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ,pgm,dd)] = 0
+            #self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ,”»’èPGM,dd)] = 1
+            if len(v) == 2:
+                pgm,dd = v
+                self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ)][i][0] = ”»’èPGM
+                self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ,pgm,dd)] = 0
+                self.dic[(JCL_NAME,JOB_SEQ,STEP_SEQ,”»’èPGM,dd)] = 1
         
         return True
     
@@ -494,8 +500,8 @@ class ‰—p_UTL_STEP•Ê_IOî•ñ:
     def _delete_all(self):
         sql,values = make_delete_sql(self.dbname,[],[])
         global conn,cursor
-        cursor.execute(sql,values)
-        conn.commit()
+        #cursor.execute(sql,values)
+        #conn.commit()
         
         
     def update_all(self):
@@ -581,7 +587,7 @@ def Œp‘±ˆ—‰ğœ”»’è(ActSheet_x,data):
     global DELETEŒp‘±,DUMPŒp‘±,RESTOREŒp‘±,FTPŒp‘±,DEFCLŒp‘±,DEFPATHŒp‘±,DEFAIXŒp‘±,DEFNVSAMŒp‘±,DEFUCATŒp‘±,COPYŒp‘±,LOADŒp‘±,UNLOADŒp‘±,UTACHŒp‘±
     global DD_CNT,”»’èDD,IO”»’è,’Ç‰ÁDSN,”»’èDD_OUT_SV,•ªŠ„•¶š—ñ,•ªŠ„•¶š—ñ2,vbCrLf
 #'20240215 ADD qian.e.wang
-    global JYAADPŒp‘±,ADMŒp‘±
+    global ADARUN3VŒp‘±,JYAADPŒp‘±,ADMŒp‘±
 #'ADD END
     
     L_str = ""
@@ -743,6 +749,10 @@ def Œp‘±ˆ—‰ğœ”»’è(ActSheet_x,data):
             UTACHŒp‘± = False
    
 #'20240215 ADD qian.e.wang
+    if ADARUN3VŒp‘±:
+        if data["SYSIN_SEQ"] == 1:
+            ADARUN3VŒp‘± = False
+   
     if JYAADPŒp‘±:
         if data["SYSIN_SEQ"] == 1:
             JYAADPŒp‘± = False
@@ -1100,7 +1110,7 @@ def JCL_STEP_SYSIN‰ğÍ_“ÁêUTL”»’èƒƒWƒbƒN(ActSheet_x,data):
     global —v‘f”,“®“I—v‘f
     global JCL_NAME_SV,JOB_SEQ_SV,STEP_SEQ_SV,vbCrLf
 #'20240215 ADD qian.e.wang
-    global JYAADPŒp‘±,ADMŒp‘±
+    global ADARUN3VŒp‘±,JYAADPŒp‘±,ADMŒp‘±
     # DEBUG
     # print("¡ JCL_NAME :["+str(JCL_NAME)+"] PGM_NAME :["+str(PGM_NAME)+"]  SYSIN :["+str(SYSIN)+"]\r\n")
 #'ADD END
@@ -2028,6 +2038,43 @@ def JCL_STEP_SYSIN‰ğÍ_“ÁêUTL”»’èƒƒWƒbƒN(ActSheet_x,data):
                         ActSheet_x[19] = 1
                     
         JYAADPŒp‘± = False
+    
+    ###=== ADARUN3V === b’è‘Î‰
+    elif PGM_NAME == "ADARUN3V":               ###“úYANPSS@PGM‹N“®UTL
+    
+        if "ADARUN" in SYSIN and ("PROGRAM=" in SYSIN or "PROG=" in SYSIN):
+            SYSIN = Mid(SYSIN, 0, 72)
+            ActSheet_x[12] = "ADARUN3V"
+            for i in range(len(•ªŠ„•¶š—ñ)):
+                if "PROGRAM=" in •ªŠ„•¶š—ñ[i] or "PROG=" in •ªŠ„•¶š—ñ[i]:
+            
+                    ŒÄo•û–@ = "ADARUN3V‹N“®"
+                    if ADARUN3VŒp‘±:
+                        ”»’èPGM = ”»’èPGM + "," + •ªŠ„•¶š—ñ[i].replace("PROGRAM=", "").replace("PROG=", "")
+                    else:
+                        ”»’èPGM = •ªŠ„•¶š—ñ[i].replace("PROGRAM=", "").replace("PROG=", "")
+                    
+                    ActSheet_x[13] = 1
+                    ActSheet_x[9] = ”»’èPGM
+                    ActSheet_x[17] = ”»’èPGM
+                    
+                    ###ŠÖ˜A«TABLE‚Éo—Í‚·‚éˆ—’Ç‰Á
+                    
+                    if ‰—p_ŒÚ‹q•Ê_JCL_PGM_DSN_.update() == False:
+                        ActSheet_x[12] = ActSheet_x[12] + vbCrLf + "XVî•ñ–³‚µ‚Ìˆ×ˆ—SKIP"
+                    else:
+                        ActSheet_x[15] = 1
+                        ActSheet_x[17] = ”»’èPGM
+                    
+                    ###ŒÚ‹q•Ê_JCL_STEP_SYSIN‚ğXV‚·‚éˆ—’Ç‰Á
+                    
+                    if ‰—p_ŒÚ‹q•Ê_JCL_STEP_SYSIN_.update() == False:
+                        ActSheet_x[12] = ActSheet_x[12] + vbCrLf + "XVî•ñ–³‚µ‚Ìˆ×ˆ—SKIP"
+                    else:
+                        ActSheet_x[17] = ”»’èPGM
+                        ActSheet_x[19] = 1
+                    
+        ADARUN3VŒp‘± = False
 #'ADD END
     
     ### === IEBPTPCH ===

@@ -45,6 +45,8 @@ def analysis1_2_read_text_COBOL(Filename):
         
         for strREC in TS:
             strREC = strREC.replace("\n","")
+            #　デバッグ用メッセージ
+            #　print("DEBUG情報：",strREC)
             if " TALLYING " in strREC:
                 print(file,"で TALLYING を含む行がありました。現在は無限ループに入ってしまう可能性があるため、解析対象からスキップします。")
                 print(strREC)

@@ -103,16 +103,20 @@ def UPDATE_OR_INSERT_JCL_PGM_DSN(data):
 
 def analysis5_JCL_PGM_SYSIN_SEPARATE(conn,cursor):
     global ‰ž—p_ŒÚ‹q•Ê_JCL_PGM_DSN_
+#'20240215 UPD qian.e.wang
     sql =   """\
-            SELECT * FROM ŒÚ‹q•Ê_JCL_PGM_DSN WHERE SYSIN_PGM <> '' AND PGM_NAME IN ( 'UTACH' , 'ADM' , 'JYAADP' )
+            SELECT * FROM ŒÚ‹q•Ê_JCL_PGM_DSN WHERE SYSIN_PGM <> '' AND PGM_NAME IN ( 'UTACH' , 'ADM' , 'JYAADP' , 'ADARUN3V' )
             """
-            
+#'UPD END
+    
     df = pd.read_sql(sql,conn)
     df.fillna("",inplace=True)
     
+#'20240215 UPD qian.e.wang
     sql = """\
-            DELETE * FROM ŒÚ‹q•Ê_JCL_PGM_DSN WHERE SYSIN_PGM <> '' AND PGM_NAME IN ( 'UTACH' , 'ADM' , 'JYAADP' )
+            DELETE * FROM ŒÚ‹q•Ê_JCL_PGM_DSN WHERE SYSIN_PGM <> '' AND PGM_NAME IN ( 'UTACH' , 'ADM' , 'JYAADP' , 'ADARUN3V' )
             """
+#'UPD END
     cursor.execute(sql)
     conn.commit()
     

@@ -3,6 +3,7 @@
 
 import sys
 import os
+import re
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from Common_analysis import *
@@ -11,7 +12,7 @@ from Common_analysis import *
 応用_顧客別_JCL_PGM_DSN_ = None
 入出力判定_IMSDB_ = None
 #'20240214 ADD qian.e.wang
-入出力判定_ADABAS_ = None
+入出力判定_ADABASorDB2_ = None
 #'ADD END
 GET_PROC_PGM_ = None
 DATA_DSN別データ分類情報_ = None
@@ -56,7 +57,10 @@ class 応用_顧客別_JCL_PGM_DSN:
 
     def setup(self):
         self.dic = {}
-        sql = "SELECT * FROM "+self.dbname
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+#        sql = "SELECT * FROM "+self.dbname
+        sql = f"SELECT * FROM {self.dbname} WHERE JCL_NAME IN ({formatted_job_list})"
+# UPD END
         
         df = pd.read_sql(sql,self.conn)
         df.fillna("",inplace=True)
@@ -103,7 +107,10 @@ class 入出力判定_IMSDB:
 
     def setup(self):
         self.dic = {}
-        sql = "SELECT * FROM "+self.dbname
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+#        sql = "SELECT * FROM "+self.dbname
+        sql = f"SELECT * FROM {self.dbname} WHERE JCL_NAME IN ({formatted_job_list})"
+# UPD END
         
         df = pd.read_sql(sql,self.conn)
         df.fillna("",inplace=True)
@@ -131,7 +138,7 @@ class 入出力判定_IMSDB:
             return "未使用" # SEGMENT利用無
    
 #'20240214 ADD qian.e.wang
-class 入出力判定_ADABAS:
+class 入出力判定_ADABASorDB2:
     def __init__(self,conn,cursor):
         self.dic = None
         self.conn = conn
@@ -153,14 +160,16 @@ class 入出力判定_ADABAS:
         if self.dic == None:
             self.setup()
         
+        # DEBUG
+        # print("■DB2 P_データ種別 :["+str(P_データ種別)+"] P_PGM :["+str(P_PGM)+"] DSN :["+str(DSN)+"]\r\n")
         if (P_データ種別,P_PGM,DSN) in self.dic:
             update = self.dic[(P_データ種別,P_PGM,DSN)]
             if update == "":
-                return "未設定"  # ADABAS利用有
+                return "未設定"  # ADABASorDB2利用有
             else:
-                return update    # ADABAS利用有
+                return update    # ADABASorDB2利用有
         else:
-            return "未使用"      # ADABAS利用無
+            return "未使用"      # ADABASorDB2利用無
 #'ADD END
    
 class GET_PROC_PGM:
@@ -173,7 +182,10 @@ class GET_PROC_PGM:
 
     def setup(self):
         self.dic = {}
-        sql = "SELECT * FROM "+self.dbname
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+#        sql = "SELECT * FROM "+self.dbname
+        sql = f"SELECT * FROM {self.dbname} WHERE JCL_NAME IN ({formatted_job_list})"
+# UPD END
         
         df = pd.read_sql(sql,self.conn)
         df.fillna("",inplace=True)
@@ -235,7 +247,10 @@ class 変数値補正:
 
     def setup(self):
         self.dic = {}
-        sql = "SELECT * FROM "+self.dbname
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+#        sql = "SELECT * FROM "+self.dbname
+        sql = f"SELECT * FROM {self.dbname} WHERE JCL_NAME IN ({formatted_job_list})"
+# UPD END
         
         df = pd.read_sql(sql,self.conn)
         df.fillna("",inplace=True)
@@ -266,17 +281,27 @@ class 変数値補正:
         
         if (P_JCL, P_JOB_SEQ, P_STEP_SEQ) in self.dic:
             var,value = self.dic[(P_JCL, P_JOB_SEQ, P_STEP_SEQ)]
-            分割文字列 = ArrayEmptyDelete(var.split(" "))
-            分割文字列2 = ArrayEmptyDelete(value.split(" "))
-            for i in range(len(分割文字列)):
-                L_tmp_str1 = "&" + 分割文字列[i]
-                L_tmp_str2 = 分割文字列2[i]
-            
-                # 'P_DSN = Replace(P_DSN, "&" & 分割文字列(i) & ".", 分割文字列2(i))
-                P_DSN = P_DSN.replace(L_tmp_str1, L_tmp_str2)
-                
+
+            #'20250125 ADD qian.e.wang 長野県信テストIO出力対応
+            if 分割文字列2 not in ("", None):
+            #'ADD END
+                分割文字列 = ArrayEmptyDelete(var.split(" "))
+                分割文字列2 = ArrayEmptyDelete(value.split(" "))
+                for i in range(len(分割文字列)):
+                    L_tmp_str1 = "&" + 分割文字列[i]
+                    #'20250125 UPD qian.e.wang 長野県信テストIO出力対応
+                    # L_tmp_str2 = 分割文字列2[i]
+                    if i < len(分割文字列2):
+                        L_tmp_str2 = 分割文字列2[i]
+                    else:
+                        # 空文字または None が見つかったらループを終了
+                        break
+                    #'UPD END
+                    
+                    # 'P_DSN = Replace(P_DSN, "&" & 分割文字列(i) & ".", 分割文字列2(i))
+                    P_DSN = P_DSN.replace(L_tmp_str1, L_tmp_str2)
+                    
             return P_DSN.replace("\"","")
-        
         
         if self.dic2 == None:
             self.setup2()
@@ -543,22 +568,47 @@ class 入出力判定:
             入出力 = self.dic5[P_DD]
             return self.暫定判定(入出力,P_PGM,PGM_SYSIN,P_DD,dsn)
         
-#'20240209 ADD qian.e.wang
-        # 8 ADABAS対応
+        # 8 ADABASorDB2対応
         if self.dic6 == None:
             self.setup6()
             
+#'20250406 UPD qian.e.wang 日産テストIO出力追加対応
+#'20240209 ADD qian.e.wang
         # DEBUG
         # print("■③ データ種別 :["+str(P_データ種別)+"] DSN :["+str(L_DSN)+"]\r\n")
-        if P_データ種別 == "ADABAS":
-            入出力 = self.dic6[(P_PGM,L_DSN.replace("ADABAS:", "").replace("(設定無)", "").replace("(" + P_PGM + ")", ""))]
-            return 入出力
+#        if P_データ種別 == "ADABAS":
+#            入出力 = self.dic6[(P_PGM,L_DSN.replace("ADABAS:", "").replace("(設定無)", "").replace("(" + P_PGM + ")", ""))]
+#            return 入出力
+#        elif P_データ種別 == "DB2":
+#            入出力 = self.dic6[(P_PGM,L_DSN.replace("DB2:", "").replace("(設定無)", "").replace("(" + P_PGM + ")", ""))]
+#            return 入出力
 #'ADD END
+#'20240611 ADD qian.e.wang 長野県信テストIO出力対応
+#        elif P_データ種別 == "SUP":
+#            入出力 = self.dic6[(P_PGM,L_DSN.replace("SUP:", "").replace("(設定無)", "").replace("(" + P_PGM + ")", ""))]
+#            return 入出力
+#'ADD END
+        # 正規表現パターンを使用して置換
+        dsn_transformed = re.sub(r"\([^)]*\)", "", L_DSN.replace(P_データ種別 + ":", ""))
+        # データ種別のセットを定義
+        データ種別_set = {"ADABAS", "DB2", "SUP"}
+        # データ種別がセットに含まれているかをチェック
+        if P_データ種別 in データ種別_set:
+            # 入出力判定を取得
+            入出力 = self.dic6[(P_PGM,dsn_transformed)]
+            return 入出力
+
+            # DEBUG
+            # print("■③ データ種別 :["+str(P_データ種別)+"] DSN :["+str(L_DSN)+"] 変換後DSN :["+str(dsn_transformed)+"]\r\n")
+#'UPD END
         
         return self.暫定判定("",P_PGM,PGM_SYSIN,P_DD,dsn)
         
     
-def 入出力判定_DISP調整(P_INOUT, P_DISP):
+#'20250122 UPD qian.e.wang 長野県信テストIO出力対応
+# def 入出力判定_DISP調整(P_INOUT, P_DISP):
+def 入出力判定_DISP調整(P_INOUT, P_DISP, P_PGM_NAME):
+#'UPD END
 
     入出力判定_DISP = P_INOUT
     
@@ -569,7 +619,13 @@ def 入出力判定_DISP調整(P_INOUT, P_DISP):
     elif P_DISP == "M,D":
        入出力判定_DISP = "DELETE"
     elif P_DISP == "O,D":
-       入出力判定_DISP = "INPUT-DELETE"
+#'20250122 UPD qian.e.wang 長野県信テストIO出力対応
+#       入出力判定_DISP = "INPUT-DELETE"
+       if P_PGM_NAME == "KDJBR14":
+           入出力判定_DISP = "DELETE"
+       else:
+           入出力判定_DISP = "INPUT-DELETE"
+#'UPD END
     elif P_INOUT == "廃止" or P_INOUT == "対応不要" or P_INOUT == "未使用":
        入出力判定_DISP = "判定対象外"
     elif P_DISP == ",K,D":
@@ -604,7 +660,10 @@ def データ種別判定(P_DSN, P_GDG, P_SYSIN,P_SCHEMAKUBUN,P_PGM):
 
 #'20240214 UPD qian.e.wang
         #data,sub_info = DATA_DSN別データ分類情報_.get(P_DSN)
-        data,sub_info = DATA_DSN別データ分類情報_.get(P_DSN.replace("ADABAS:", "").replace("(設定無)", "").replace("(" + P_PGM + ")", ""))
+#'20240611 UPD qian.e.wang 長野県信テストIO出力対応
+#        data,sub_info = DATA_DSN別データ分類情報_.get(P_DSN.replace("ADABAS:", "").replace("DB2:", "").replace("(設定無)", "").replace("(" + P_PGM + ")", ""))
+        data,sub_info = DATA_DSN別データ分類情報_.get(P_DSN.replace("ADABAS:", "").replace("DB2:", "").replace("SUP:", "").replace("(設定無)", "").replace("(" + P_PGM + ")", ""))
+#'UPD END
         データ種別 = data
         # DEBUG
         # print("■① データ種別 :["+str(データ種別)+"] DSN :["+str(P_DSN)+"]\r\n")
@@ -658,7 +717,7 @@ def DSN情報なし時処理(ActSheet_x,data):
 def DSN情報有り時処理(P_PARAM,data,data2):
     global ActSheet,ActSheet_x
     global JCL_NAME_WK,PGM_NAME,STEP_SEQ,JCL_NAME_SV,JOB_SEQ_SV,STEP_SEQ_SV,PROC_ID
-    global PGM_SYSIN,L_GDG,L_DISP,L_SYSIN,L_SCHEMAKUBUN,P_データ種別,TMP_DSN,PGM_PROC,BMCP_PGM,parm
+    global PGM_SYSIN,L_GDG,L_DISP,L_SYSIN,L_SCHEMAKUBUN,P_データ種別,P_入出力判定,TMP_DSN,PGM_PROC,BMCP_PGM,parm
     global 分割文字列
     global 入出力判定_IMSDB_,GET_PROC_PGM_,変数値補正_,Select_BMCP_PGM_,入出力判定_
     #'20240614 ADD jiaqi.chen
@@ -712,6 +771,9 @@ def DSN情報有り時処理(P_PARAM,data,data2):
     L_GDG = data2["GDG"]
     L_SYSIN = data2["SYSIN"]
     L_DISP = data2["DISP"]
+#'20250122 ADD qian.e.wang 長野県信テストIO出力対応
+    L_PGM_NAME = data2["PGM_NAME"]
+#'ADD END
     
     # '★★★★　暫定調査ロジック　★★★★
     # 'if data2["DSN = "DUMMY":
@@ -793,11 +855,18 @@ def DSN情報有り時処理(P_PARAM,data,data2):
         # '20210607 Add Horiuchi
         # 'Batch Module Control Program対応
         # '=========================================================
+        # DEBUG
+        # print("■② PGM_SYSIN :["+str(PGM_SYSIN)+"] PGM :["+str(data2["PGM_NAME"])+"] DSN :["+str(data2["DSN"])+"]\r\n")
         if BMCP_PGM != "":
             parm = BMCP_PGM
         #'入出力判定用PARM調整
+#'20250406 UPD qian.e.wang 日産テストIO出力追加対応
         elif PGM_SYSIN != "":
-            parm = PGM_SYSIN
+            if "(" + PGM_SYSIN + ")" in data2["DSN"]:
+                parm = PGM_SYSIN
+            else:
+                parm = data2["PGM_NAME"]
+#'UPD END
         elif data["PGM名"] != "":
             parm = data["PGM名"]
         elif PGM_PROC != "":
@@ -806,14 +875,34 @@ def DSN情報有り時処理(P_PARAM,data,data2):
             parm = data["PROC名"]
         
 #'20240219 ADD qian.e.wang
+        P_入出力判定 = ""
         if "ADABAS:" in data2["DSN"]:
             P_データ種別 = "ADABAS"
+        elif "DB2:" in data2["DSN"]:
+            P_データ種別 = "DB2"
+#'20240611 ADD qian.e.wang 長野県信テストIO出力対応
+        elif "SUP:" in data2["DSN"]:
+            P_データ種別 = "SUP"
+#'ADD END
+        # 正規表現パターンを使用して置換
+        dsn_transformed = re.sub(r"\([^)]*\)", "", data2["DSN"].replace(P_データ種別 + ":", ""))
+
         # DEBUG
-        # print("■② データ種別 :["+str(P_データ種別)+"] 入出力判定用PARM :["+str(parm)+"] DSN :["+str(data2["DSN"])+"]\r\n")
-        if P_データ種別 == "ADABAS":                
-            # 'P_入出力判定
-            P_入出力判定 = 入出力判定_ADABAS_.get(P_データ種別, parm, data2["DSN"].replace("ADABAS:", "").replace("(設定無)", "").replace("(" + parm + ")", ""))
-            ActSheet_x[43] = "ADABAS有無判定"  #'コメント欄      '42⇒43
+        # print("■② データ種別 :["+str(P_データ種別)+"] 入出力判定用PARM :["+str(parm)+"] DSN :["+str(data2["DSN"])+"] 変換後DSN :["+str(dsn_transformed)+"]\r\n")
+
+#'20250406 UPD qian.e.wang 日産テストIO出力追加対応
+        # データ種別のセットを定義
+        データ種別_set = {"ADABAS", "DB2", "SUP"}
+        # データ種別がセットに含まれているかをチェック
+        if P_データ種別 in データ種別_set:
+            # 入出力判定を取得
+            P_入出力判定 = 入出力判定_ADABASorDB2_.get(P_データ種別, parm, dsn_transformed)
+            # コメント欄にデータ種別有無判定の結果を設定
+            ActSheet_x[43] = P_データ種別 + "有無判定"  #'コメント欄      '42⇒43
+
+            # DEBUG
+            # print("■② データ種別 :["+str(P_データ種別)+"] 入出力判定用PARM :["+str(parm)+"] P_入出力判定 :["+str(P_入出力判定)+"]\r\n")
+#'UPD END
 #'ADD END
 
         #'P_入出力判定 = 入出力判定(PARM, data2["DD_NAME, L_SYSIN, data["JCL_ID, data["STEP名, data["JOB_SEQ, data["STEP_SEQ, data2["DSN)
@@ -821,7 +910,8 @@ def DSN情報有り時処理(P_PARAM,data,data2):
             P_入出力判定 = 入出力判定_.get(parm, data2["DD_NAME"], L_SYSIN, JCL_NAME_SV, data["STEP名"], JOB_SEQ_SV, STEP_SEQ_SV, data2["DSN"],data["PGM名"])
 
         # DEBUG
-        # print(parm, data2["DD_NAME"], L_SYSIN, JCL_NAME_SV, data["STEP名"], JOB_SEQ_SV, STEP_SEQ_SV, data2["DSN"],data["PGM名"],P_入出力判定)
+        # if P_入出力判定 == "":
+        #     print(parm, data2["DD_NAME"], L_SYSIN, JCL_NAME_SV, data["STEP名"], JOB_SEQ_SV, STEP_SEQ_SV, data2["DSN"],data["PGM名"],P_入出力判定)
 
         # 'データ種別による入出力判定補正
         # 'if P_データ種別 = "IMSDB" and P_入出力判定 != "DELETE":     'DELETEする場合があるのでそれは例外にする
@@ -867,6 +957,7 @@ def DSN情報有り時処理(P_PARAM,data,data2):
             # '
             # ' N：NEW 　 新規
             # ' O：OLD　  既存独占読取
+            # ' R：RNW 　 新たに再作成      ⇒最新バージョンツールに追加されたもの
             # ' S：SHR　  既存共有読取
             # ' M：MOD　  追加モード
             # ' K：KEEP   保存
@@ -879,18 +970,29 @@ def DSN情報有り時処理(P_PARAM,data,data2):
             # '            "O,END","O,K","O,P","S,K","S,P","END"
             # ' DELETE  ⇒ "S,D","O,D",",D",",D,D",",K,D","M,D","N,D",",P,D"
             # ' I-O     ⇒ "M","M,C","M,K","M,P"
-            # ' OUTPUT  ⇒ "N","N,C","N,K","N,P",",C",",C,D","O,C",",END",",K",",P",
+            # ' OUTPUT  ⇒ "N","N,C","N,K","N,P",
+            # '            "R","R,C","R,K","R,P",
+            # '            ",C",",C,D","O,C",",END",",K",",K,K",",P",
             # '            "N,END"(//OUTDD    DD   DSN=ARCSBP&SL,UNIT=AFF=CMT,DISP=(NEW,&DSP)),
             # '            "END,END"(//KUTOUT   DD   DSN=_____,DISP=(___,____)),
-            # '            "END,K"(//OLOG      DD   &OUT.UNIT=&U,VOL=SER=&V,DSN=&D,DISP=(&DP,KEEP))
+            # '            "END,K"(//OLOG      DD   &OUT.UNIT=&U,VOL=SER=&V,DSN=&D,DISP=(&DP,KEEP)),
+            # '            "R,C"            ⇒最新バージョンツールに追加されたもの
             # ' *******************************************************************
             if L_DISP in  ("S", "O"):
                 ActSheet_x[22] = "INPUT"
-            elif L_DISP in ("S,D", "O,D", ",D", ",D,D", ",K,D", "M,D", "N,D", ",P,D","R,D"):
+#'20250122 UPD qian.e.wang 長野県信テストIO出力対応
+#             elif L_DISP in ("S,D", "O,D", ",D", ",D,D", ",K,D", "M,D", "N,D", ",P,D","R,D"):
+            elif L_DISP in ("S,D", ",D", ",D,D", ",K,D", "M,D", "N,D", ",P,D","R,D"):
                 ActSheet_x[22] = "DELETE"
+            elif L_DISP == "O,D":
+                if L_PGM_NAME == "KDJBR14":
+                    ActSheet_x[22] = "DELETE"
+                else:
+                    ActSheet_x[22] = "INPUT-DELETE"
+#'UPD END
             elif L_DISP in ("M", "M,C", "M,K", "M,P"):
                 ActSheet_x[22] = "I-O"
-            elif L_DISP in ("N", "N,C", "N,K", "N,P", "R", "R,C", "R,K", "R,P",",C", ",C,D", "O,C", ",END", ",K", ",P", "N,END", "END,END", "END,K","R,END"):
+            elif L_DISP in ("N", "N,C", "N,K", "N,P", "R", "R,C", "R,K", "R,P",",C", ",C,D", "O,C", ",END", ",K", ",K,K", ",P", "N,END", "END,END", "END,K","R,END"):
                 ActSheet_x[22] = "OUTPUT"
             else:
                 #' "O,END","O,K","O,P","S,K","S,P","END"
@@ -899,7 +1001,10 @@ def DSN情報有り時処理(P_PARAM,data,data2):
         
         
         if P_入出力判定 != "":
-            ActSheet_x[22] = 入出力判定_DISP調整(P_入出力判定, L_DISP) #'21⇒22
+#'20250122 UPD qian.e.wang 長野県信テストIO出力対応
+#             ActSheet_x[22] = 入出力判定_DISP調整(P_入出力判定, L_DISP) #'21⇒22
+            ActSheet_x[22] = 入出力判定_DISP調整(P_入出力判定, L_DISP, L_PGM_NAME) #'21⇒22
+#'UPD END
         
         # 'データ種別2判定 ※テストツールで利用するための対応
         if P_データ種別 == "DB2_TABLE":
@@ -958,12 +1063,12 @@ def DSN情報有り時処理(P_PARAM,data,data2):
         if data2["DD_NAME"] == "STEPLIB":
             ActSheet_x[22] = "判定対象外"
         
-#'20240209 DEL qian.e.wang
+#'20250406 DEL qian.e.wang 日産テストIO出力追加対応
         # ' 20220302 wangqian DSNによるデータ種別2判定の追加　START
-        if data2["DSN"] == "変数値要確認":
-            ActSheet_x[20] = "独自DAM"
-        elif len(data2["DSN"].replace("(設定無)", "")) == 4:
-            ActSheet_x[20] = "基準"
+#        if data2["DSN"] == "変数値要確認":
+#            ActSheet_x[20] = "独自DAM"
+#        elif len(data2["DSN"].replace("(設定無)", "")) == 4:
+#            ActSheet_x[20] = "基準"
         # ' 20220302 wangqian DSNによるデータ種別2判定の追加　END
 #' DEL END
     else:
@@ -978,45 +1083,66 @@ def DSN情報有り時処理(P_PARAM,data,data2):
     
     
     # '========================================================================
-    # 'JFE倉敷暫定対応
-    if "NDB:" in data2["DSN"]:   # '14⇒15,17⇒18,19⇒20
-        ActSheet_x[15] = ActSheet_x[15].replace("NDB:", "").replace("(設定無)", "")
-        ActSheet_x[18] = "確認中"
-        ActSheet_x[20] = "NDB"
-    elif "DAM:" in data2["DSN"]:
-        ActSheet_x[15] = ActSheet_x[15].replace("DAM:", "").replace("(設定無)", "")
-        ActSheet_x[18] = "確認中"
-        ActSheet_x[20] = "DAM"
-    elif "基準:" in data2["DSN"]:
-        ActSheet_x[15] = ActSheet_x[15].replace("基準:", "").replace("(設定無)", "")
-        ActSheet_x[18] = "確認中"
-        ActSheet_x[20] = "基準"
+#'20250406 UPD qian.e.wang 日産テストIO出力追加対応
+#    # 'JFE倉敷暫定対応
+#    if "NDB:" in data2["DSN"]:   # '14⇒15,17⇒18,19⇒20
+#        ActSheet_x[15] = ActSheet_x[15].replace("NDB:", "").replace("(設定無)", "")
+#        ActSheet_x[18] = ""      # '"確認中"⇒""
+#        ActSheet_x[20] = "NDB"
+#    elif "DAM:" in data2["DSN"]:
+#        ActSheet_x[15] = ActSheet_x[15].replace("DAM:", "").replace("(設定無)", "")
+#        ActSheet_x[18] = ""      # '"確認中"⇒""
+#        ActSheet_x[20] = "DAM"
+#    elif "基準:" in data2["DSN"]:
+#        ActSheet_x[15] = ActSheet_x[15].replace("基準:", "").replace("(設定無)", "")
+#        ActSheet_x[18] = ""      # '"確認中"⇒""
+#        ActSheet_x[20] = "基準"
 #'20240209 ADD qian.e.wang
-    # '日産ANPSS暫定対応
-    if "ADABAS:" in data2["DSN"]:   # '14⇒15,17⇒18,19⇒20
-        ActSheet_x[15] = ActSheet_x[15].replace("ADABAS:", "").replace("(設定無)", "")
-        ActSheet_x[18] = "確認中"
-        ActSheet_x[19] = "ADABAS"
-        ActSheet_x[20] = "ADABAS"
+#    # '日産ANPSS暫定対応
+#    if "ADABAS:" in data2["DSN"]:   # '14⇒15,17⇒18,19⇒20
+#        ActSheet_x[15] = ActSheet_x[15].replace("ADABAS:", "").replace("(設定無)", "")
+#        ActSheet_x[18] = ""      # '"確認中"⇒""
+#        ActSheet_x[19] = "ADABAS"
+#        ActSheet_x[20] = "ADABAS"
+#    elif "DB2:" in data2["DSN"]:   # '14⇒15,17⇒18,19⇒20
+#        ActSheet_x[15] = ActSheet_x[15].replace("DB2:", "").replace("(設定無)", "")
+#        ActSheet_x[18] = ""      # '"確認中"⇒""
+#        ActSheet_x[19] = "DB2"
+#        ActSheet_x[20] = "DB2"
 #' ADD END
+#'20240611 ADD qian.e.wang 長野県信テストIO出力対応
+#    elif "SUP:" in data2["DSN"]:   # '14⇒15,17⇒18,19⇒20
+#        ActSheet_x[15] = ActSheet_x[15].replace("SUP:", "").replace("(設定無)", "")
+#        ActSheet_x[18] = ""      # '"確認中"⇒""
+#        ActSheet_x[19] = "SUP"
+#        ActSheet_x[20] = "SUP"
+#'ADD END
+    if P_データ種別 + ":" in data2["DSN"]:
+        ActSheet_x[15] = re.sub(r"\([^)]*\)", "", ActSheet_x[15].replace(P_データ種別 + ":", ""))
+        ActSheet_x[18] = ""
+        ActSheet_x[19] = P_データ種別
+#'UPD END
     # '========================================================================
     
     
     
     if data2["STEP_SEQ"] != "" and P_PARAM == "PROC":
         ActSheet_x[8] = data2["STEP_SEQ"]
-        ActSheet_x[9] = data2["STEP_NAME"]#  '20161021 Takei
+        ActSheet_x[9] = data2["STEP_NAME"] #  '20161021 Takei
         ActSheet_x[11] = PROC_ID
         ActSheet_x[39] = "①"           # '★38⇒39
     elif P_PARAM == "JCL" and STEP_SEQ_SV > 0:       #      '20161021 Takei
-        # 'ActSheet_x[8] = data["STEP_SEQ2   '20161021 Takei　20190914変更
+        # 'ActSheet_x[8] = data["STEP_SEQ2"]   '20161021 Takei　20190914変更
         ActSheet_x[8] = 0  # '20161021 Takei　20190914変更
         ActSheet_x[9] = data2["STEP_NAME"]#   '20161021 Takei
         ActSheet_x[11] = PROC_ID
         ActSheet_x[39] = "②"       #     '★38⇒39
     else:
         ActSheet_x[8] = data["STEP_SEQ2"]
-        ActSheet_x[9] = data["STEP_NAME"]#   '20161021 Takei
+        #'20250127 UPD qian.e.wang 長野県信テストIO出力対応
+        # ActSheet_x[9] = data["STEP_NAME"] #   '20161021 Takei
+        ActSheet_x[9] = data["STEP名"]
+        # UPD END
         # 'ActSheet_x[10] = ""
         ActSheet_x[39] = "③"  #          '★38⇒39
     
@@ -1024,12 +1150,12 @@ def DSN情報有り時処理(P_PARAM,data,data2):
         ActSheet_x[8] = int(data2["手動更新FLG"])
 
 #'20240219 ADD qian.e.wang
-    if (data2["PGM_NAME"] == "ADM" or data2["PGM_NAME"] == "JYAADP") and (data2["自動更新FLG"] == "自動設定（UTL解析）" or data2["自動更新FLG"] == "手動補足（UTL解析）"):
+    if (data2["PGM_NAME"] == "ADM" or data2["PGM_NAME"] == "JYAADP" or data2["PGM_NAME"] == "ADARUN3V") and (data2["自動更新FLG"] == "自動設定（UTL解析）" or data2["自動更新FLG"] == "手動補足（UTL解析）"):
         ActSheet_x[8] = int(data2["手動更新FLG"])
 #'ADD END
     
-    # 'ActSheet_x[8] = data["STEP_NAME     '20161021 Takei
-    # 'ActSheet_x[9] = data["PGM_NAME  '上で補正しているのでここでは行わない
+    # 'ActSheet_x[8] = data["STEP_NAME"]     '20161021 Takei
+    # 'ActSheet_x[9] = data["PGM_NAME"]  '上で補正しているのでここでは行わない
     
     # 'if P_PARAM = "PROC":
     # '
@@ -1158,36 +1284,62 @@ def 解析処理(data):
 
 
 
-def analysis1(conn,cursor):
+#'20250202 UPD qian.e.wang 長野県信テストIO出力対応
+# def analysis1(conn,cursor):
+def analysis1(conn, cursor, test_id, job_list):
     global 応用_顧客別_JCL_PGM_DSN_,入出力判定_IMSDB_,GET_PROC_PGM_,DATA_DSN別データ分類情報_,変数値補正_,Select_BMCP_PGM_,入出力判定_
-#'20240214 ADD qian.e.wang
-    global 入出力判定_ADABAS_
-#'ADD END
+    #'20240214 ADD qian.e.wang
+    global 入出力判定_ADABASorDB2_
+    #'ADD END
+    global formatted_job_list
+    global ActSheet
     
-    sql =   """\
-        
-            SELECT * FROM TEST_JCL_PROC_PGM関連設定
+    # ActSheet を初期化
+    ActSheet = []
+    
+#    sql =   """\
+#            SELECT * FROM TEST_JCL_PROC_PGM関連設定
+#            """
+    sql_template = """\
+            SELECT * FROM TEST_JCL_PROC_PGM関連設定 WHERE TEST_ID = '{}' AND JCL_ID IN ({})
             """
+    
+    formatted_job_list = ', '.join(f"'{job}'" for job in job_list)
+    sql = sql_template.format(test_id, formatted_job_list)
+# UPD END
             
     df = pd.read_sql(sql,conn)
     df.fillna("",inplace=True)
     
-    print(len(df),"解析1")
+    # print(len(df),"解析1")
+    
     応用_顧客別_JCL_PGM_DSN_ = 応用_顧客別_JCL_PGM_DSN(conn,cursor)
     入出力判定_IMSDB_ = 入出力判定_IMSDB(conn,cursor)
-#'20240214 ADD qian.e.wang
-    入出力判定_ADABAS_ = 入出力判定_ADABAS(conn,cursor)
-#'ADD END
+    
+    #'20240214 ADD qian.e.wang
+    入出力判定_ADABASorDB2_ = 入出力判定_ADABASorDB2(conn,cursor)
+    #'ADD END
+    
     GET_PROC_PGM_ = GET_PROC_PGM(conn,cursor)
     DATA_DSN別データ分類情報_ = DATA_DSN別データ分類情報(conn,cursor)
     変数値補正_ = 変数値補正(conn,cursor)
     Select_BMCP_PGM_ = Select_BMCP_PGM(conn,cursor)
     入出力判定_ = 入出力判定(conn,cursor)
-
+    
+#'20250131 ADD qian.e.wang 長野県信テストIO出力対応
+    unique_records_set = set()
+# ADD END
+    
     for i in range(len(df)):
         data = df.iloc[i]
-        解析処理(data)
-    
-    global ActSheet
+        
+#'20250131 UPD qian.e.wang 長野県信テストIO出力対応
+#        解析処理(data)
+        record_tuple = tuple(data)  # リストからタプルに変換（ハッシュ可能）
+        
+        if record_tuple not in unique_records_set:
+            unique_records_set.add(record_tuple)
+            解析処理(data)  # 重複していない場合のみ解析処理を実行
+# UPD END
     
     return ActSheet

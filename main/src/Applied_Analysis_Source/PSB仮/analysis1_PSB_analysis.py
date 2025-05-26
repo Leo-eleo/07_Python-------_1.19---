@@ -179,6 +179,7 @@ def CheckPedFile(ped_file):
                         continue
                     if len(tokenList) > i+1:
                         ddName = tokenList[i+1]   
+                        #print("yDBDNAMEz ddName=" + tokenList[i+1] + " i=" + str(i))
                         
             if "PROCOPT" in line:
                 for i in range(len(tokenList)):
@@ -186,6 +187,7 @@ def CheckPedFile(ped_file):
                         continue
                     if len(tokenList) > i+1:
                         accessMode = tokenList[i+1]   
+                        #print("yPROCOPTz accessMode=" + tokenList[i+1] + " i=" + str(i))
                         
             if "SENSEG" in line:
                 for i in range(len(tokenList)):
@@ -193,6 +195,7 @@ def CheckPedFile(ped_file):
                         continue
                     if len(tokenList) > i+2 and tokenList[i+1] == "NAME":
                         schemaName = tokenList[i+2]  
+                        #print("ySENSEGz schemaName=" + tokenList[i+2] + " i=" + str(i))
                         schemaName_list.append((ddName,schemaName,accessMode))
                         
                 
@@ -202,9 +205,11 @@ def CheckPedFile(ped_file):
                         continue
                     if len(tokenList) > i+1:
                         pedName = tokenList[i+1]   
+                        #print("yPSBNAMEz tokenList[i]=" + tokenList[i] + " i=" + str(i))
                     
                 
                 for ddName,schemaName,accessMode in schemaName_list:
+                    print("yPSB‰ğÍŒ‹‰Êo—Íˆ—z PSBFile=" + pedFile + " PSBNAME=" + pedName + " SENSEG=" + schemaName + " DBDNAME=" + ddName + " PROCOPT=" + accessMode)
                     PED‰ğÍŒ‹‰Êo—Íˆ—_.insert(pedFile, pedName, schemaName, ddName, accessMode,GetSCHEMAKUBUN_.get(schemaName),"")
                 schemaName = ""
                 ddName = ""
@@ -212,7 +217,9 @@ def CheckPedFile(ped_file):
                 schemaName_list = []
         
         if schemaName != "":
-            print("y—vŠm”Fz ACCESS MODE‚Ìw’è‚ª‚³‚ê‚Ä‚¢‚È‚¢B PED’è‹`‘Ì–¼=" + pedFile)
+            for ddName,schemaName,accessMode in schemaName_list:
+                print("yPSB‰ğÍŒ‹‰Êo—Íˆ—z PSBFile=" + pedFile + " PSBNAME=" + "" + " SENSEG=" + schemaName + " DBDNAME=" + ddName + " PROCOPT=" + accessMode)
+            #print("y—vŠm”Fz ACCESS MODE‚Ìw’è‚ª‚³‚ê‚Ä‚¢‚È‚¢B PED’è‹`‘Ì–¼=" + pedFile)
 
 
 def analysis1_PED2_analysis(conn,cursor,ped_file_path):

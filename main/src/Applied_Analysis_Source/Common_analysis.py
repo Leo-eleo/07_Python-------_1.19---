@@ -4,12 +4,22 @@
 import glob
 import os
 import subprocess
+import time
 
 import pandas as pd
 import pyodbc
 
 output_header = []
 
+# ファイルが開いているかどうかをチェックする関数
+def is_file_open(file_path):
+    if not os.path.exists(file_path):
+        return False
+    try:
+        os.rename(file_path, file_path)
+        return False
+    except OSError:
+        return True
 
 ### take suffix from string if the string match
 ### ex) xxx.txt and take_suffix(xxx.txt,".txt")  ->   xxx

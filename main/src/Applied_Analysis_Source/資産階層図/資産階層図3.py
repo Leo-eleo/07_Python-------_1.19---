@@ -53,7 +53,7 @@ def create_output(test_id,num,source,ans_list,title):
     write_excel_multi_sheet(filename,lis,sheet_names,title)
     
 
-def main(db_path,title,output_separate="True",output_longest_only=False,maxnum=10000000):
+def main(db_path,title,output_separate="True",output_longest_only=False,maxnum=80000000):
     
     print("start analysis")
     M = int(maxnum) ### Œ”‚ÌÅ‘å’l@‚±‚ê‚ğ’´‚¦‚½‚ç~‚ß‚é

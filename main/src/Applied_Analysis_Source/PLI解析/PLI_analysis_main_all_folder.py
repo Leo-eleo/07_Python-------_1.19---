@@ -161,7 +161,9 @@ def main_all_folder(db_base_path, Folder_PLI_path, PLI_setting_path, title):
         subprocess.call(command, shell=True)
         print("Create the new accdb file ", db_path)
 
-        PLI_Files = glob_files(prepare_temp_path, recursive=False, type="file")
+        #TODO　MUTB次期一時変更　20240527　wangqian
+        #PLI_Files = glob_files(prepare_temp_path, recursive=False, type="file")
+        PLI_Files = glob_files(PLI_Folder, recursive=False, type="file")
 
         ld = len(PLI_Files)
         conn = connect_accdb(db_path)

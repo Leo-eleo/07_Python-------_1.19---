@@ -231,9 +231,9 @@ def COBOL_CALL命令解析(data):
                     if 分割文字列[6] != ".":
                         ActSheet_x[7] = reformat_record(分割文字列[6])
                     else:
-                        ActSheet_x[7] = "要再調査"
+                        ActSheet_x[7] = "要再調査①"
                 else:
-                    ActSheet_x[7] = "要再調査"
+                    ActSheet_x[7] = "要再調査②"
                     
                 ActSheet_x[13] = JFE_CRUD判定
                 ActSheet_x[14] = JFE_IO判定
@@ -250,9 +250,9 @@ def COBOL_CALL命令解析(data):
                     if 分割文字列[6] != ".":
                         ActSheet_x[7] = reformat_record(分割文字列[6])
                     else:
-                        ActSheet_x[7] = "要再調査"
+                        ActSheet_x[7] = "要再調査③"
                 else:
-                    ActSheet_x[7] = "要再調査"
+                    ActSheet_x[7] = "要再調査④"
                 ActSheet_x[13] = JFE_CRUD判定
                 ActSheet_x[14] = JFE_IO判定
 
@@ -306,9 +306,9 @@ def COBOL_CALL命令解析(data):
                     if 分割文字列[6] != ".":
                         ActSheet_x[7] = reformat_record(分割文字列[6])
                     else:
-                        ActSheet_x[7] = "要再調査"
+                        ActSheet_x[7] = "要再調査⑤"
                 else:
-                    ActSheet_x[7] = "要再調査"
+                    ActSheet_x[7] = "要再調査⑥"
                 ActSheet_x[13] = JFE_CRUD判定
                 ActSheet_x[14] = JFE_IO判定
 
@@ -325,16 +325,19 @@ def COBOL_CALL命令解析(data):
                     if 分割文字列[6] != ".":
                         ActSheet_x[7] = reformat_record(分割文字列[6])
                     else:
-                        ActSheet_x[7] = "要再調査"
+                        ActSheet_x[7] = "要再調査⑦"
                 else:
-                    ActSheet_x[7] = "要再調査"
+                    ActSheet_x[7] = "要再調査⑧"
                 ActSheet_x[13] = JFE_CRUD判定
                 ActSheet_x[14] = JFE_IO判定
 
                                                     
             else:
             
-                if len(分割文字列) > JFE_レコード関連引数位置:
+#'20240906 UPD qian.e.wang 長野県信テストIO出力対応
+#                if len(分割文字列) > JFE_レコード関連引数位置:
+                if len(分割文字列) >= JFE_レコード関連引数位置:
+#'UPD END
                     JFE_処理レコード = 分割文字列[JFE_レコード関連引数位置]
                     ActSheet_x[7] = reformat_record(JFE_処理レコード)
                     ActSheet_x[13] = JFE_CRUD判定
@@ -342,7 +345,7 @@ def COBOL_CALL命令解析(data):
                  
             
             if ActSheet_x[7] == "":
-                ActSheet_x[7] = "要再調査"
+                ActSheet_x[7] = "要再調査⑨"
                 
     return ActSheet_x
 
@@ -356,7 +359,9 @@ def COBOL_EXEC命令解析(data):
     
     ActSheet_x = [""]*22
     資産ID = data["資産ID"]
-    if data["PGM_NAME"] == "UTACH" or data["PGM_NAME"] == "ADM" or data["PGM_NAME"] == "JYAADP":
+#'20240215 UPD qian.e.wang
+    if data["PGM_NAME"] == "UTACH" or data["PGM_NAME"] == "ADM" or data["PGM_NAME"] == "JYAADP" or data["PGM_NAME"] == "ADARUN3V":
+#'UPD END
         COBOL_ID = data["SYSIN_PGM"]
     else:
         COBOL_ID = data["PGM_NAME"]
@@ -374,8 +379,12 @@ def COBOL_EXEC命令解析(data):
     else:
         # DEBUG
         # print("関連資産① :["+str(関連資産)+"] JFE_データ分類① :["+str(JFE_データ分類)+"]\r\n")
+#'20240611 UPD qian.e.wang 長野県信テストIO出力対応
+#        ###日産ANPSS一般 ADABAS
+#        if JFE_データ分類 == "ADABAS" or JFE_データ分類 == "DB2":
         ###日産ANPSS一般 ADABAS
-        if JFE_データ分類 == "ADABAS":
+        if JFE_データ分類 == "ADABAS" or JFE_データ分類 == "DB2" or JFE_データ分類 == "SUP" or JFE_データ分類 == "NDB":
+#'UPD END
             ActSheet_x[3] = 関連資産
             ActSheet_x[4] = JFE_データ分類
             
@@ -385,9 +394,20 @@ def COBOL_EXEC命令解析(data):
             ActSheet_x[14] = JFE_IO判定
             
             
-    if ActSheet_x[7] == "":
-        ActSheet_x[7] = "要再調査"
-    
+#'20240906 UPD qian.e.wang 長野県信テストIO出力対応
+    #if ActSheet_x[7] == "":
+    #    ActSheet_x[7] = "要再調査"
+    #
+        else:
+            ActSheet_x[3] = 関連資産
+            ActSheet_x[4] = JFE_データ分類
+            
+            JFE_処理レコード = 関連資産
+            ActSheet_x[7] = reformat_record(JFE_処理レコード)
+            ActSheet_x[13] = JFE_CRUD判定
+            ActSheet_x[14] = JFE_IO判定
+#'UPD END
+
     return ActSheet_x
 #'ADD END
     
@@ -450,7 +470,7 @@ def analysis1(db_path,title):
     ActSheet = []
     
     
-    ###日産ANPSS ADABAS向け
+    ###日産ANPSS ADABAS向け(SMBC DB2追記)
     sql =   """\
             SELECT tbl1.*, tbl2.SYSIN_PGM FROM 顧客別_JCL_CMD情報 tbl1 
             INNER JOIN (SELECT DISTINCT JCL_NAME, STEP_SEQ, PGM_NAME, SYSIN_PGM FROM 顧客別_JCL_PGM_DSN) AS tbl2 

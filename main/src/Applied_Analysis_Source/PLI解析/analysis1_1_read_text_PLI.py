@@ -42,24 +42,35 @@ def analysis1_1_read_text_PLI(fileName):
     GYO = 2
     with open(fileName, "r", encoding="CP932") as TS:
         for strREC in TS:
+            #print("■DEBUG strREC :", strREC)
             TmpSheet_GYO = [""] * 9
             strREC = strREC.replace("\n", "")
 
-            # 整形処理の追加
-            制御文字 = Mid(strREC, 1, 1)
+            # 整形処理の追加　20240527　wangqian
+            trimmed_strREC = strREC.strip()
+            if trimmed_strREC[:2] == "*/":
+                strREC = trimmed_strREC[2:] + ' ' * (80 - len(trimmed_strREC[2:]))
+
+            #TODO MUTB一時改修　20240527　wangqian
+            #制御文字 = strREC[1]
+            制御文字 = strREC[0]
             if 制御文字 == "*" or 制御文字 == "/":
                 PLI行分類 = "ｺﾒﾝﾄ行"
             # elif 制御文字 == "D" or 制御文字 == "d":
             #     PLI行分類 = "ﾃﾞﾊﾞｯｸﾞ行"
             # elif 制御文字 == "-":
             #     PLI行分類 = "継続行"
-            elif Mid(strREC, 6, min(66,len(strREC))).replace(" ", "") == "":
+
+            #TODO MUTB一時改修　20240527　wangqian
+            #elif Mid(strREC, 6, min(66,len(strREC))).replace(" ", "") == "":
+            elif strREC[0:66].replace(" ", "") == "":
                 PLI行分類 = "空白行"
             else:
                 PLI行分類 = "通常行"
 
             # '行情報
             TmpSheet_GYO[1] = PLI行分類
+            #print("■DEBUG 行情報 :", PLI行分類)
 
             # '標識情報
             TmpSheet_GYO[2] = ""
@@ -69,6 +80,7 @@ def analysis1_1_read_text_PLI(fileName):
 
             # '元資産行情報
             TmpSheet_GYO[8] = strREC
+            #print("■DEBUG 元資産行情報 :", strREC)
 
             GYO = GYO + 1
             TmpSheet.append(TmpSheet_GYO)

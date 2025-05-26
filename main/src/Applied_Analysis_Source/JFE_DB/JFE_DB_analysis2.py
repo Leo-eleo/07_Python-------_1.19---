@@ -239,7 +239,6 @@ class 応用_顧客別_JCL_PGM_DSN_FOR_DB_JFE:
             return False
 
         key_list = ["LIBRARY_ID","JCL_NAME","JOB_SEQ","JOB_ID","STEP_SEQ","STEP_NAME","PGM_NAME","PROC_NAME","SYSIN_PGM","DD_NAME","DSN","手動更新FLG","自動更新FLG"]
-        
         value_list = [LIBRARY_ID,JCL_NAME,JOB_SEQ,JOB_ID,STEP_SEQ,STEP_ID,PGM_NAME,PROC_NAME,SYSIN_PGM,判定DD,追加DSN,"",DB自動登録時PARM]
         
         sql,value = make_insert_sql(self.dbname,value_list,key_list)
@@ -529,7 +528,15 @@ def 各種登録DB更新(P_実行カウント,ActSheet_x,JFE_関連DSN):
                 if JFE_データ分類 == "ADABAS":
                     呼出方法 = "COBOL-ADABAS-" + JFE_CRUD判定
                     判定PGM = JFE_処理レコード
+                if JFE_データ分類 == "DB2":
+                    呼出方法 = "COBOL-DB2-" + JFE_CRUD判定
+                    判定PGM = JFE_処理レコード
 #'END ADD
+#'20240611 ADD qian.e.wang 長野県信テストIO出力対応
+                if JFE_データ分類 == "SUP":
+                    呼出方法 = "COBOL-SUP-" + JFE_CRUD判定
+                    判定PGM = JFE_処理レコード
+#'ADD END
                 if JFE_データ分類 == "基準":
                     呼出方法 = "COBOL-基準"
                     判定PGM = JFE_関連DSN
@@ -592,6 +599,12 @@ def 各種登録DB更新(P_実行カウント,ActSheet_x,JFE_関連DSN):
             JFE_DSN = 関連データ.replace("NDB:", "").replace("(設定無)", "").replace("(" + 判定PGM + ")", "")
         if JFE_データ分類 == "ADABAS":
             JFE_DSN = 関連データ.replace("ADABAS:", "").replace("(設定無)", "").replace("(" + 判定PGM + ")", "")
+        if JFE_データ分類 == "DB2":
+            JFE_DSN = 関連データ.replace("DB2:", "").replace("(設定無)", "").replace("(" + 判定PGM + ")", "")
+#'20240611 ADD qian.e.wang 長野県信テストIO出力対応
+        if JFE_データ分類 == "SUP":
+            JFE_DSN = 関連データ.replace("SUP:", "").replace("(設定無)", "").replace("(" + 判定PGM + ")", "")
+#'ADD END
         if JFE_データ分類 == "基準":
             JFE_DSN = 関連データ.replace("基準:", "").replace("(設定無)", "").replace("(" + 判定PGM + ")", "")
         

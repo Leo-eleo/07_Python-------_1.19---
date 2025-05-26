@@ -86,7 +86,14 @@ def analysis1_4_rebuild_Token_COBOL(TokenSheet):
                 検索列 = 基準列
             
                 while True:
+# '2025/1/30 ADD 東洋アルミ解析不能対応 qian.e.wang
+                    if 検索列 >= len(TokenSheet_GYO):  # インデックス範囲チェック
+                        break
+# ADD END
+
                     検索文字列 = TokenSheet_GYO[検索列]
+                    #　デバッグ用メッセージ
+                    #　print("DEBUG情報(検索文字列)：",検索文字列)
 
                  #   if 予約語判定_COBOL(検索文字列) and 改行判定_COBOL()and 出力列 > 基準列2:
                         

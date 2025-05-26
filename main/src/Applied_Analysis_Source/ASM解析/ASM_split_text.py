@@ -14,7 +14,7 @@ def asm_split_line(line):
     if line == "":
         return split_list
     
-    if line[0] != " ":
+    if line[0] != " " and " " in line:
         label = line[:line.index(" ")]
         line = line[line.index(" "):]
     else:
