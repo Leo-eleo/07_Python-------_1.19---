@@ -1,0 +1,82 @@
+input:
+  encoding:
+    - utf-8
+    - shift-jis
+  extensions:
+    - .txt
+    - .cbl
+    - .jcl
+    - .asm
+    - .prc
+    - .cpy
+    - .for
+
+output:
+  format: xlsx
+  sheet_name: 資産分類結果
+
+model:
+  name: microsoft/codebert-base
+  threshold: 0.9  # 仕様書では0.8だが、0.9に設定されている
+  max_length: 512
+
+performance:
+  batch_size: 32
+  num_workers: 4
+  device: cuda if available else cpu
+
+ai_services:
+  openai:
+    api_key: "your-openai-api-key"
+    model: "gpt-4"
+  anthropic:
+    api_key: "your-anthropic-api-key"
+    model: "claude-3-opus-20240229"
+
+databases:
+  asset_db:
+    host: "localhost"
+    port: 5432
+    database: "asset_management"
+    user: "asset_user"
+    password: "****"
+  pattern_db:
+    host: "localhost"
+    port: 27017
+    database: "language_patterns"
+
+cloud_services:
+  azure:
+    storage_account: "assetstorage"
+    container: "code-repository"
+    connection_string: "DefaultEndpointsProtocol=https;..."
+  aws:
+    s3_bucket: "asset-analysis"
+    region: "ap-northeast-1"
+  gcp:
+    project_id: "asset-management"
+    bucket: "code-analysis"
+
+security:
+  masking:
+    patterns:
+      - password
+      - api_key
+      - secret
+    replacement: "****"
+  
+  access_control:
+    allowed_ips: ["10.0.0.0/24", "192.168.1.0/24"]
+    rate_limit: 100  # requests per minute
+    max_file_size: 10485760  # 10MB
+
+logging:
+  audit:
+    enabled: true
+    retention: 90  # days
+    fields:
+      - timestamp
+      - user
+      - action
+      - file
+      - result
